@@ -70,18 +70,7 @@ npm run build
 npm run start
 ```
 
-After `@sincw/pivot-ui` is published to npm, you can also run the bundled production build without installing:
 
-```bash
-npx @sincw/pivot-ui@latest
-```
-
-Or install it globally:
-
-```bash
-npm install -g @sincw/pivot-ui
-pivot-ui
-```
 
 Open [http://localhost:30141](http://localhost:30141). The CLI opens a browser after the server is ready unless disabled.
 

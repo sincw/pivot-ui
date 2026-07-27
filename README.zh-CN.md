@@ -72,18 +72,7 @@ npm run build
 npm run start
 ```
 
-`@sincw/pivot-ui` 发布到 npm 后，也可以无需安装直接运行已打包的生产版本：
 
-```bash
-npx @sincw/pivot-ui@latest
-```
-
-或全局安装后使用：
-
-```bash
-npm install -g @sincw/pivot-ui
-pivot-ui
-```
 
 启动后访问 [http://localhost:30141](http://localhost:30141)。除非禁用，CLI 会在服务就绪后自动打开浏览器。
 
