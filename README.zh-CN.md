@@ -51,16 +51,19 @@ Pivot UI 在窄屏上会调整工作方式，而不只是缩小界面。
 ![Pi Web mobile2 ](docs/image/mobile2.jpg)
 ## 快速开始
 
-从源码运行：
+正常使用请启动生产服务。`npm run dev` 仅用于修改 Pivot UI；它会按需编译路由，重启后的首次访问较慢。
+
+从源码启动生产服务：
 
 ```bash
 git clone https://github.com/sincw/pivot-ui.git
 cd pivot-ui
 npm install
-npm run dev
+npm run build
+npm run start
 ```
 
-`@sincw/pivot-ui` 发布到 npm 后，也可以无需安装直接运行：
+`@sincw/pivot-ui` 发布到 npm 后，也可以无需安装直接运行已打包的生产版本：
 
 ```bash
 npx @sincw/pivot-ui@latest
@@ -124,7 +127,7 @@ npm install
 npm run dev
 ```
 
-本地开发服务地址为 [http://localhost:30141](http://localhost:30141)。
+仅在修改 Pivot UI 时使用开发服务，地址为 [http://localhost:30141](http://localhost:30141)。
 
 ```bash
 node --test lib/*.test.mjs components/*.test.mjs

@@ -49,16 +49,19 @@ Pivot UI changes its layout rather than only shrinking it on a narrow screen.
 
 ## Quick start
 
+For normal use, run the production server. `npm run dev` is only for changing Pivot UI; it compiles routes on demand and is slower after restarts.
+
 Run from source:
 
 ```bash
 git clone https://github.com/sincw/pivot-ui.git
 cd pivot-ui
 npm install
-npm run dev
+npm run build
+npm run start
 ```
 
-After `@sincw/pivot-ui` is published to npm, you can also run it without installing:
+After `@sincw/pivot-ui` is published to npm, you can also run the bundled production build without installing:
 
 ```bash
 npx @sincw/pivot-ui@latest
@@ -122,7 +125,7 @@ npm install
 npm run dev
 ```
 
-The development server runs at [http://localhost:30141](http://localhost:30141).
+Use the development server only while changing Pivot UI. It runs at [http://localhost:30141](http://localhost:30141).
 
 ```bash
 node --test lib/*.test.mjs components/*.test.mjs
