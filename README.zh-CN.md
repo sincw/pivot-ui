@@ -11,6 +11,15 @@ Pivot UI 是 [pi 编程智能体](https://github.com/badlogic/pi-mono) 的响应
 
 Pivot UI 是 [agegr/pi-web](https://github.com/agegr/pi-web) 的独立维护 Fork，遵循 [MIT License](./LICENSE) 发布。
 
+## 特别鸣谢
+
+<p align="center">
+  <a href="https://linux.do">
+    <img src="docs/image/linuxdo.png" alt="LINUX DO" width="420" />
+  </a>
+</p>
+<p align="center"><b>学AI，上L站！祝L站越来越好～</b></p>
+
 ## 为持续的 Agent 工作而设计
 
 - **接续真实会话**：按项目浏览本机 pi 会话，跟随实时输出，查看上下文和费用，并从上次停下的位置继续。

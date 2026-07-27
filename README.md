@@ -10,6 +10,15 @@ Pivot UI is a responsive local workspace for the [pi coding agent](https://githu
 
 Pivot UI is an independently maintained fork of [agegr/pi-web](https://github.com/agegr/pi-web). It is distributed under the [MIT License](./LICENSE).
 
+## Special Thanks
+
+<p align="center">
+  <a href="https://linux.do">
+    <img src="docs/image/linuxdo.png" alt="LINUX DO" width="420" />
+  </a>
+</p>
+<p align="center"><b>For all things AI, head to LINUX DO! Wishing the community ever greater success~</b></p>
+
 ## Built for active agent work
 
 - **Resume real sessions**: browse local pi sessions by project, follow live streaming output, inspect context and cost, then continue from where you left off.
