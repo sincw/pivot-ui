@@ -29,7 +29,7 @@ export default function RootLayout({
         <meta name="google" content="notranslate" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("pi-theme");if(t==="dark"||t==="eye")document.documentElement.classList.add(t)}catch(e){}})();`,
+            __html: `(function(){try{var h=window.__REACT_DEVTOOLS_GLOBAL_HOOK__;if(h&&typeof h.onCommitFiberRoot!=="function")h.onCommitFiberRoot=function(){};var t=localStorage.getItem("pi-theme");if(t==="dark"||t==="eye")document.documentElement.classList.add(t)}catch(e){}})();`,
           }}
         />
       </head>
