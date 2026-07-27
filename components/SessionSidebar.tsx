@@ -176,6 +176,8 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
   const [listing, setListing] = useState<DirectoryListing | null>(null);
   const [loading, setLoading] = useState(false);
   const [selecting, setSelecting] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const loadDirectory = useCallback(async (path?: string) => {
@@ -197,6 +199,8 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
   useEffect(() => {
     if (!open) return;
     setSelecting(false);
+    setCreating(false);
+    setNewWorkspaceName("");
     void loadDirectory();
   }, [open, loadDirectory]);
 
@@ -232,6 +236,39 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
     onClose();
   };
 
+  const createWorkspace = async () => {
+    if (!listing || creating || selecting) return;
+    const name = newWorkspaceName.trim();
+    if (!name) {
+      setError("Workspace name is required");
+      return;
+    }
+    setCreating(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/cwd/browse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: listing.path, name }),
+      });
+      const data = await response.json().catch(() => ({})) as { path?: string; error?: string };
+      if (!response.ok || data.error || !data.path) {
+        setError(data.error ?? `HTTP ${response.status}`);
+        return;
+      }
+      const selectError = await onSelect(data.path);
+      if (selectError) {
+        setError(selectError);
+        return;
+      }
+      onClose();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return createPortal(
     <div
       role="presentation"
@@ -260,11 +297,15 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
             <ChevronRight size={16} strokeWidth={2} aria-hidden="true" style={{ color: "var(--text-dim)", flexShrink: 0 }} />
           </button>)}
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 16px", borderTop: "1px solid var(--border)" }}>
-          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text-muted)", font: "12px var(--font-mono)" }}>{displayPath}</span>
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", padding: "12px 16px", borderTop: "1px solid var(--border)" }}>
+          <span style={{ flex: "1 1 100%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text-muted)", font: "12px var(--font-mono)" }}>{displayPath}</span>
+          <form onSubmit={(event) => { event.preventDefault(); void createWorkspace(); }} style={{ display: "flex", flex: "1 1 280px", minWidth: 0, gap: 8 }}>
+            <input value={newWorkspaceName} onChange={(event) => setNewWorkspaceName(event.target.value)} disabled={creating || selecting} aria-label="Workspace folder name" placeholder="Workspace folder name" style={{ flex: 1, minWidth: 0, minHeight: 34, padding: "0 9px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text)", font: "12px var(--font-mono)" }} />
+            <button type="submit" disabled={!listing || !newWorkspaceName.trim() || creating || selecting} style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 34, padding: "0 13px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text)", cursor: creating ? "wait" : "pointer", opacity: !listing || !newWorkspaceName.trim() || selecting ? 0.6 : 1 }}><FolderPlus size={15} aria-hidden="true" />{creating ? "Creating..." : "Create"}</button>
+          </form>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: 8, marginLeft: "auto" }}>
             <button type="button" onClick={onClose} style={{ minHeight: 34, padding: "0 13px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text)", cursor: "pointer" }}>Cancel</button>
-            <button type="button" onClick={() => void chooseDirectory()} disabled={!listing || loading || selecting} style={{ minHeight: 34, padding: "0 13px", background: "var(--accent)", border: "1px solid var(--accent)", borderRadius: 5, color: "#fff", cursor: selecting ? "wait" : "pointer", opacity: !listing || loading ? 0.6 : 1 }}>{selecting ? "Selecting..." : "Select"}</button>
+            <button type="button" onClick={() => void chooseDirectory()} disabled={!listing || loading || selecting || creating} style={{ minHeight: 34, padding: "0 13px", background: "var(--accent)", border: "1px solid var(--accent)", borderRadius: 5, color: "#fff", cursor: selecting ? "wait" : "pointer", opacity: !listing || loading || creating ? 0.6 : 1 }}>{selecting ? "Selecting..." : "Select"}</button>
           </div>
         </div>
       </div>
@@ -702,18 +743,17 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     }
   }, [projectRootFor]);
 
-  const handleDefaultCwd = useCallback(async () => {
+  const handleDefaultCwd = useCallback(async (): Promise<string | null> => {
     try {
       const res = await fetch("/api/default-cwd", { method: "POST" });
-      const data = await res.json() as { cwd?: string; error?: string };
-      if (data.cwd) {
-        setSelectedCwd(data.cwd);
-        setDropdownOpen(false);
-      }
-    } catch {
-      // ignore
+      const data = await res.json().catch(() => ({})) as { cwd?: string; error?: string };
+      if (!res.ok || data.error) return data.error ?? `HTTP ${res.status}`;
+      if (!data.cwd) return "Workspace creation did not return a path";
+      return selectWorkspaceDirectory(data.cwd);
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
     }
-  }, []);
+  }, [selectWorkspaceDirectory]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -1004,7 +1044,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
 
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); handleDefaultCwd(); }}
+                onClick={(e) => { e.stopPropagation(); void handleDefaultCwd(); }}
                 style={{ display: "flex", alignItems: "center", gap: 7, width: "100%", padding: "8px 10px", background: "none", border: "none", borderTop: visibleProjects.length > 0 ? "1px solid var(--border)" : "none", color: "var(--text-muted)", cursor: "pointer", textAlign: "left", fontSize: 11 }}
               >
                 <Folder size={10} strokeWidth={1.1} aria-hidden="true" style={{ flexShrink: 0 }} />
