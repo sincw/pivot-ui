@@ -4,11 +4,14 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 export const GATEWAY_SESSION_COOKIE = "pivot-ui-gateway";
-export const GATEWAY_SESSION_MAX_AGE = 30 * 24 * 60 * 60;
+export const GATEWAY_SESSION_EXPIRES = new Date("9999-12-31T23:59:59.000Z");
+export const GATEWAY_TOKEN_ENV = "PIVOT_GATEWAY_TOKEN";
 
 interface GatewayAuthOptions {
   tokenPath?: string;
   log?: (message: string) => void;
+  env?: NodeJS.ProcessEnv;
+  report?: boolean;
 }
 
 export function getGatewayTokenPath(home = homedir()): string {
@@ -24,9 +27,25 @@ function readToken(tokenPath: string): string | null {
   }
 }
 
-export function getGatewayToken({ tokenPath = getGatewayTokenPath(), log = console.log }: GatewayAuthOptions = {}): string {
+function readConfiguredToken(env: NodeJS.ProcessEnv): string | null {
+  const token = env[GATEWAY_TOKEN_ENV]?.trim();
+  if (!token) return null;
+  if (token.length > 128) throw new Error(`${GATEWAY_TOKEN_ENV} must be at most 128 characters`);
+  return token;
+}
+
+export function getGatewayToken({ tokenPath = getGatewayTokenPath(), log = console.log, env = process.env, report = false }: GatewayAuthOptions = {}): string {
+  const configured = readConfiguredToken(env);
+  if (configured) {
+    if (report) log(`\nPivot UI gateway token:\n${configured}\nLoaded from ${GATEWAY_TOKEN_ENV}\n`);
+    return configured;
+  }
+
   const existing = readToken(tokenPath);
-  if (existing) return existing;
+  if (existing) {
+    if (report) log(`\nPivot UI gateway token:\n${existing}\nLoaded from ${tokenPath}\n`);
+    return existing;
+  }
 
   mkdirSync(dirname(tokenPath), { recursive: true, mode: 0o700 });
   const token = randomBytes(32).toString("base64url");
@@ -52,18 +71,15 @@ export function matchesGatewayToken(value: string, options?: GatewayAuthOptions)
   return matches(value, getGatewayToken(options));
 }
 
-function signSession(expiresAt: string, token: string): string {
-  return createHmac("sha256", token).update(expiresAt).digest("base64url");
+function signSession(token: string): string {
+  return createHmac("sha256", token).update(GATEWAY_SESSION_COOKIE).digest("base64url");
 }
 
 export function createGatewaySession(options?: GatewayAuthOptions): string {
-  const expiresAt = String(Date.now() + GATEWAY_SESSION_MAX_AGE * 1000);
-  return `${expiresAt}.${signSession(expiresAt, getGatewayToken(options))}`;
+  return signSession(getGatewayToken(options));
 }
 
 export function isGatewaySessionValid(session: string | undefined, options?: GatewayAuthOptions): boolean {
   if (!session) return false;
-  const [expiresAt, signature, extra] = session.split(".");
-  if (!expiresAt || !signature || extra || !/^\d+$/.test(expiresAt) || Number(expiresAt) <= Date.now()) return false;
-  return matches(signature, signSession(expiresAt, getGatewayToken(options)));
+  return matches(session, signSession(getGatewayToken(options)));
 }

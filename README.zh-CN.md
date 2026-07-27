@@ -84,6 +84,33 @@ PORT=8080 pivot-ui                # 指定端口
 PIVOT_UI_NO_OPEN=1 pivot-ui       # 适用于后台服务
 ```
 
+## 网关认证
+
+所有页面和 API 都需要网关令牌。启动时，如果配置了 `PIVOT_GATEWAY_TOKEN`，它会优先于 `~/.pivot-ui/gateway-token`；否则 Pivot UI 会读取该文件，不存在时自动创建。启动日志会说明当前令牌的来源。打开 Pivot UI 后，在登录页输入该值。
+
+签名登录状态在服务端没有到期时间，Cookie 的到期日为 9999 年，但浏览器可能施加更短的存储上限。除非清除浏览器数据或变更当前网关令牌，它会一直有效。请像对待密码一样保管令牌：任何持有该令牌的人都能访问此服务暴露的本机会话、工作区文件和终端。
+
+## 环境变量配置
+
+Next.js 会将 `.env*` 文件加载到服务端环境中；本仓库已在 Git 中忽略 `.env*`。请把机器专属的敏感值写在 `.env.local`，且不要给敏感变量使用 `NEXT_PUBLIC_` 前缀。生产服务修改环境变量后需要重启。
+
+```bash
+# .env.local
+PIVOT_GATEWAY_TOKEN=replace-with-a-long-random-token
+PIVOT_ALLOWED_DEV_ORIGINS=home.sinc.lol
+```
+
+| 变量 | 用途 |
+| --- | --- |
+| `PIVOT_GATEWAY_TOKEN` | 网关令牌，最长 128 个字符。它会覆盖 `~/.pivot-ui/gateway-token`；重启后修改该值会使现有登录 Cookie 失效。 |
+| `PIVOT_ALLOWED_DEV_ORIGINS` | 通过自定义主机名或反向代理访问开发服务时，额外放行的主机名，以逗号分隔。`localhost` 和 `127.0.0.1` 始终有效。 |
+| `PI_CODING_AGENT_DIR` | 替代的 pi agent 数据目录。 |
+| `SKILLS_WEB_URL` | Skill 排行和链接使用的基础 URL，默认 `https://skills.sh`。 |
+| `SKILLS_API_URL` | Skill 搜索和更新检查使用的基础 URL，默认 `https://skills.sh`。 |
+| `GITHUB_TOKEN` 或 `GH_TOKEN` | 检查 Skill 更新时使用的可选 GitHub token。 |
+
+`PORT`、`HOSTNAME` 和 `PIVOT_UI_NO_OPEN` 会在 Next.js 加载 `.env*` 前由 `pivot-ui` 启动器读取，请按上文示例在启动命令的环境中设置，不要依赖 env 文件。
+
 ## 本地数据与边界
 
 - 会话历史仍保存在 pi 的本机 `~/.pi/agent/sessions` 目录。可通过 `PI_CODING_AGENT_DIR` 使用其他 pi agent 目录。

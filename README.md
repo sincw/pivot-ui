@@ -82,6 +82,33 @@ PORT=8080 pivot-ui                # choose a port
 PIVOT_UI_NO_OPEN=1 pivot-ui       # useful for a background service
 ```
 
+## Gateway authentication
+
+Every page and API requires a gateway token. On startup, `PIVOT_GATEWAY_TOKEN` takes precedence when configured; otherwise Pivot UI reads `~/.pivot-ui/gateway-token`, creating it when absent. The startup log identifies the active source. Open Pivot UI and enter that value on the login page.
+
+The signed session does not expire server-side and its cookie expires in year 9999, though browsers can impose a shorter storage limit. It remains valid until browser data is cleared or the active gateway token changes. Treat the token like a password: anyone with it can access the local sessions, workspace files, and terminals exposed by this server.
+
+## Environment configuration
+
+Next.js loads `.env*` files into the server environment; `.env*` is ignored by Git in this repository. Use `.env.local` for machine-specific secrets and never use a `NEXT_PUBLIC_` prefix for secrets. Restart a production server after changing its environment.
+
+```bash
+# .env.local
+PIVOT_GATEWAY_TOKEN=replace-with-a-long-random-token
+PIVOT_ALLOWED_DEV_ORIGINS=home.sinc.lol
+```
+
+| Variable | Purpose |
+| --- | --- |
+| `PIVOT_GATEWAY_TOKEN` | Gateway token, up to 128 characters. Overrides `~/.pivot-ui/gateway-token`; changing it invalidates existing login cookies after restart. |
+| `PIVOT_ALLOWED_DEV_ORIGINS` | Comma-separated additional development hostnames for a custom domain or reverse proxy. `localhost` and `127.0.0.1` are always allowed. |
+| `PI_CODING_AGENT_DIR` | Alternative pi agent data directory. |
+| `SKILLS_WEB_URL` | Base URL used for Skill rankings and links. Defaults to `https://skills.sh`. |
+| `SKILLS_API_URL` | Base URL for Skill search and update checks. Defaults to `https://skills.sh`. |
+| `GITHUB_TOKEN` or `GH_TOKEN` | Optional GitHub token used while checking Skill updates. |
+
+`PORT`, `HOSTNAME`, and `PIVOT_UI_NO_OPEN` configure the `pivot-ui` launcher before Next.js loads `.env*`; pass them in the command environment as shown above instead of relying on an env file.
+
 ## Local data and safety
 
 - Session history remains in pi's local `~/.pi/agent/sessions` directory. Set `PI_CODING_AGENT_DIR` to use another pi agent directory.

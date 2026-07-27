@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createGatewaySession, GATEWAY_SESSION_COOKIE, GATEWAY_SESSION_MAX_AGE, matchesGatewayToken } from "@/lib/gateway-auth";
+import { createGatewaySession, GATEWAY_SESSION_COOKIE, GATEWAY_SESSION_EXPIRES, matchesGatewayToken } from "@/lib/gateway-auth";
 
 function isSecureRequest(request: Request): boolean {
   return request.url.startsWith("https:") || request.headers.get("x-forwarded-proto") === "https";
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   const response = NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
   response.cookies.set(GATEWAY_SESSION_COOKIE, createGatewaySession(), {
     httpOnly: true,
-    maxAge: GATEWAY_SESSION_MAX_AGE,
+    expires: GATEWAY_SESSION_EXPIRES,
     path: "/",
     sameSite: "strict",
     secure: isSecureRequest(request),

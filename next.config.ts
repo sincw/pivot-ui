@@ -9,10 +9,14 @@ try {
   piVersion = (JSON.parse(readFileSync(piPkgPath, "utf8")) as { version: string }).version;
 } catch { /* package not found, use default */ }
 
-const allowedDevOrigins = (process.env.PIVOT_ALLOWED_DEV_ORIGINS ?? "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const allowedDevOrigins = [
+  "localhost",
+  "127.0.0.1",
+  ...(process.env.PIVOT_ALLOWED_DEV_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
 
 const nextConfig: NextConfig = {
   serverExternalPackages: [
