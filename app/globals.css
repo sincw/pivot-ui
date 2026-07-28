@@ -903,11 +903,13 @@ html.dark .terminal-tool-xterm .xterm-viewport {
 
   .terminal-mobile-keyboard-dock-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 4px;
   }
 
   .terminal-mobile-keyboard-dock-grid button {
+    display: grid;
+    place-items: center;
     min-width: 0;
     min-height: 44px;
     padding: 0 3px;
@@ -4250,7 +4252,6 @@ button.workspace-file-tree-toggle:hover { color: var(--text); }
 }
 
 .git-review-remote-actions { margin-left: auto; }
-
 
 
 

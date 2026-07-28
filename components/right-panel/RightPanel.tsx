@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { Maximize2, Minimize2, PanelRightClose, Plus } from "lucide-react";
+import { Maximize2, Minimize2, PanelLeftClose, PanelRightClose, Plus } from "lucide-react";
 import { TabBar, type Tab } from "../TabBar";
 import { FileTab } from "./FileTab";
 import { getRightPanelTool, rightPanelTools } from "./tool-registry";
@@ -292,6 +292,11 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
         style={{ display: "flex", flexDirection: "column", borderLeft: "1px solid var(--border)", background: "var(--bg)" }}
       >
         <div className="right-panel-toolbar">
+          <div className="right-panel-toolbar-actions">
+            <button type="button" className="right-panel-action" onClick={() => { setPanelFullscreen(false); setPanelOpen(false); setMenuOpen(false); }} title="关闭工具面板" aria-label="关闭工具面板">
+              <PanelIcon size={16} />
+            </button>
+          </div>
           <div className="right-panel-toolbar-tabs">
             {tabBarTabs.length > 0 && (
               <TabBar
@@ -305,9 +310,6 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
           <div ref={menuRef} className="right-panel-toolbar-actions">
             <button type="button" className="right-panel-action" onClick={toggleFullscreen} title={panelFullscreen ? "退出全屏" : "全屏"} aria-label={panelFullscreen ? "退出全屏" : "全屏"}>
               <FullscreenIcon exit={panelFullscreen} />
-            </button>
-            <button type="button" className="right-panel-action" onClick={() => { setPanelFullscreen(false); setPanelOpen(false); setMenuOpen(false); }} title="关闭工具面板" aria-label="关闭工具面板">
-              <PanelIcon size={16} />
             </button>
             <button type="button" className="right-panel-action" onClick={() => setMenuOpen((open) => !open)} title="新建工具" aria-label="新建工具" aria-expanded={menuOpen}>
               <AddToolIcon />
@@ -353,7 +355,7 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
       </div>
       {!panelOpen && (
         <button type="button" className="right-panel-open-button" onClick={openPanel} title="打开工具面板" aria-label="打开工具面板">
-          <PanelIcon />
+          <PanelLeftClose size={17} aria-hidden="true" />
         </button>
       )}
     </>

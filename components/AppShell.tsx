@@ -586,6 +586,9 @@ export function AppShell() {
             const c = sessionStats?.cost ?? 0;
             const fmt = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(0)}k` : String(n);
             const costStr = c > 0 ? (c >= 0.01 ? `$${c.toFixed(2)}` : `<$0.01`) : null;
+            const cacheHitRate = t && t.input + t.cacheRead > 0 ? t.cacheRead / (t.input + t.cacheRead) : null;
+            const cacheHitRateLabel = cacheHitRate === null ? "--" : `${(cacheHitRate * 100).toFixed(1)}%`;
+            const showCacheHitRate = cacheHitRate !== null;
 
             let ctxColor = "var(--text-muted)";
             let ctxStr: string | null = null;
@@ -593,7 +596,8 @@ export function AppShell() {
               const pct = contextUsage.percent;
               if (pct !== null && pct > 90) ctxColor = "#ef4444";
               else if (pct !== null && pct > 70) ctxColor = "rgba(234,179,8,0.95)";
-              ctxStr = pct !== null ? `${pct.toFixed(0)}% / ${fmt(contextUsage.contextWindow)}` : `? / ${fmt(contextUsage.contextWindow)}`;
+              const pctStr = pct !== null ? `${pct.toFixed(0)}%` : "?";
+              ctxStr = isMobile ? pctStr : `${pctStr} / ${fmt(contextUsage.contextWindow)}`;
             }
 
             const tooltipParts: string[] = [];
@@ -602,6 +606,7 @@ export function AppShell() {
               tooltipParts.push(`out: ${t.output.toLocaleString()}`);
               tooltipParts.push(`cache read: ${t.cacheRead.toLocaleString()}`);
               tooltipParts.push(`cache write: ${t.cacheWrite.toLocaleString()}`);
+              tooltipParts.push(`cache hit: ${cacheHitRateLabel}`);
               if (c > 0) tooltipParts.push(`cost: $${c.toFixed(4)}`);
             }
             if (contextUsage?.contextWindow) {
@@ -619,9 +624,9 @@ export function AppShell() {
                 aria-pressed={activeTopPanel === "session"}
                 style={{
                   marginLeft: "auto",
-                  display: "flex", alignItems: "center", gap: 10,
-                  paddingLeft: 12,
-                  paddingRight: 48,
+                  display: "flex", alignItems: "center", gap: isMobile ? 8 : 10,
+                  paddingLeft: isMobile ? 8 : 12,
+                  paddingRight: isMobile ? 12 : 48,
                   height: "100%",
                   background: activeTopPanel === "session" ? "var(--bg-selected)" : "none",
                   border: "none",
@@ -647,10 +652,10 @@ export function AppShell() {
                     {fmt(t.output)}
                   </span>
                 )}
-                {!isMobile && t && t.cacheRead > 0 && (
-                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                {showCacheHitRate && (
+                  <span title={`Cache hit rate: ${cacheHitRateLabel}`} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <RotateCcw size={12} strokeWidth={1.2} aria-hidden="true" />
-                    {fmt(t.cacheRead)}
+                    {cacheHitRateLabel}
                   </span>
                 )}
                 {!isMobile && costStr && (
@@ -732,6 +737,9 @@ export function AppShell() {
                       ["Output", sessionStats.tokens.output.toLocaleString()],
                       ...(sessionStats.tokens.cacheRead > 0 ? [["Cache Read", sessionStats.tokens.cacheRead.toLocaleString()]] : []),
                       ...(sessionStats.tokens.cacheWrite > 0 ? [["Cache Write", sessionStats.tokens.cacheWrite.toLocaleString()]] : []),
+                      ["Cache Hit", sessionStats.tokens.input + sessionStats.tokens.cacheRead > 0
+                        ? `${(sessionStats.tokens.cacheRead / (sessionStats.tokens.input + sessionStats.tokens.cacheRead) * 100).toFixed(1)}%`
+                        : "--"],
                       ["Total", sessionStats.tokens.total.toLocaleString()],
                     ];
                     const ctx = contextUsage ?? sessionStats.contextUsage;

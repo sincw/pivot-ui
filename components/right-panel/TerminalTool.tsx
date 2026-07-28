@@ -534,12 +534,14 @@ function TerminalTool({ cwd, projectRoot, tabId, tabLabel }: RightPanelToolProps
           terminalRef.current?.focus();
         }}>
           <button type="button" onClick={() => sendTerminalInput("\r")} title="回车" aria-label="回车">Enter</button>
+          <button type="button" onClick={() => sendTerminalInput("~")} title="波浪号" aria-label="波浪号">~</button>
           <button type="button" onClick={() => { setStickyModifier(null); setPasteOpen(true); }} title="粘贴或输入命令" aria-label="粘贴或输入命令">粘贴</button>
           <button type="button" onClick={() => sendTerminalInput("\x1b[A")} title="上箭头" aria-label="上箭头"><ArrowUp size={16} aria-hidden="true" /></button>
           <button type="button" onClick={() => sendTerminalInput("\x1b")} title="取消" aria-label="取消">Esc</button>
           <button type="button" onClick={() => sendTerminalInput("\x1b[H")} title="行首" aria-label="行首">Home</button>
           <button type="button" onClick={() => sendTerminalInput("\x1b[F")} title="行尾" aria-label="行尾">End</button>
           <button type="button" onClick={() => sendTerminalInput("\t")} title="制表" aria-label="制表">Tab</button>
+          <button type="button" onClick={() => sendTerminalInput("/")} title="斜杠" aria-label="斜杠">/</button>
           <button type="button" onClick={() => sendTerminalInput("\x1b[D")} title="左箭头" aria-label="左箭头"><ArrowLeft size={16} aria-hidden="true" /></button>
           <button type="button" onClick={() => sendTerminalInput("\x1b[B")} title="下箭头" aria-label="下箭头"><ArrowDown size={16} aria-hidden="true" /></button>
           <button type="button" onClick={() => sendTerminalInput("\x1b[C")} title="右箭头" aria-label="右箭头"><ArrowRight size={16} aria-hidden="true" /></button>

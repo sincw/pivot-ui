@@ -42,7 +42,9 @@ export function useChatViewport({
   const handledPromptGenerationRef = useRef(promptGeneration);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    ignoreProgrammaticScrollUntilRef.current = Date.now() + PROGRAMMATIC_SCROLL_IGNORE_MS;
+    if (behavior === "smooth") {
+      ignoreProgrammaticScrollUntilRef.current = Date.now() + PROGRAMMATIC_SCROLL_IGNORE_MS;
+    }
     messagesEndRef.current?.scrollIntoView({ behavior });
   }, []);
 

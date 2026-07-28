@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pencil, X } from "lucide-react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import type { LibraryMcpServerInfo, WorkspaceMcpServerInfo } from "@/lib/api-types";
 
@@ -27,7 +27,7 @@ type DisplayServer = {
   managedByPack?: boolean;
 };
 
-function ServerDetail({ server }: { server: DisplayServer }) {
+function ServerDetail({ server, onRemove, removing }: { server: DisplayServer; onRemove?: () => void; removing?: boolean }) {
   const source = server.source === "team-project" ? "team project" : "pi project";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -35,6 +35,7 @@ function ServerDetail({ server }: { server: DisplayServer }) {
         {server.source && <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 3, color: server.source === "pi-project" ? "var(--accent)" : "var(--text-dim)", background: server.source === "pi-project" ? "color-mix(in srgb, var(--accent) 12%, var(--bg))" : "rgba(120,120,120,0.12)" }}>{source}</span>}
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-dim)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{server.serverKey}</span>
         {server.managedByPack && <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 3, color: "#16a34a", background: "rgba(34,197,94,0.1)" }}>Pack managed</span>}
+        {onRemove && <button type="button" onClick={onRemove} disabled={removing} title={`Remove ${server.serverKey} from workspace`} aria-label={`Remove ${server.serverKey} from workspace`} style={{ display: "grid", placeItems: "center", width: 28, height: 28, padding: 0, flexShrink: 0, border: "1px solid var(--border)", borderRadius: 5, background: "none", color: "#ef4444", cursor: removing ? "not-allowed" : "pointer", opacity: removing ? 0.5 : 1 }}><Trash2 size={14} strokeWidth={1.8} aria-hidden="true" /></button>}
       </div>
       {server.name && server.name !== server.serverKey && (
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -64,11 +65,81 @@ function ServerDetail({ server }: { server: DisplayServer }) {
   );
 }
 
+function LibraryMcpPicker({ cwd, onInstalled }: { cwd: string; onInstalled: () => void }) {
+  const isMobile = useIsMobile();
+  const [servers, setServers] = useState<LibraryMcpServerInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [installing, setInstalling] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState("");
+  const [installedKeys, setInstalledKeys] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let ignore = false;
+    void Promise.all([
+      fetch("/api/skill-library/mcp-servers").then(async (response) => {
+        const data = await response.json() as { mcpServers?: LibraryMcpServerInfo[]; error?: string };
+        if (!response.ok || data.error) throw new Error(data.error ?? `HTTP ${response.status}`);
+        return data.mcpServers ?? [];
+      }),
+      fetch(`/api/mcp/servers?cwd=${encodeURIComponent(cwd)}`).then(async (response) => {
+        const data = await response.json() as { servers?: WorkspaceMcpServerInfo[]; error?: string };
+        if (!response.ok || data.error) throw new Error(data.error ?? `HTTP ${response.status}`);
+        return data.servers ?? [];
+      }),
+    ])
+      .then(([libraryServers, workspaceServers]) => {
+        if (ignore) return;
+        setServers(libraryServers);
+        setInstalledKeys(new Set(workspaceServers.map((server) => server.serverKey.toLowerCase())));
+      })
+      .catch((reason) => !ignore && setError(reason instanceof Error ? reason.message : String(reason)))
+      .finally(() => !ignore && setLoading(false));
+    return () => { ignore = true; };
+  }, [cwd]);
+
+  const install = async (serverKey: string) => {
+    if (installedKeys.has(serverKey.toLowerCase())) return;
+    setInstalling(serverKey);
+    setError(null);
+    try {
+      const response = await fetch("/api/mcp/servers", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cwd, serverKey }),
+      });
+      const data = await response.json() as { error?: string };
+      if (!response.ok || data.error) throw new Error(data.error ?? `HTTP ${response.status}`);
+      onInstalled();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setInstalling(null);
+    }
+  };
+
+  return <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    {!isMobile && <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 12 }}>Add MCP from Library</div>}
+    {error && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 10 }}>{error}</div>}
+    {loading ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Loading...</div>
+      : servers.length === 0 ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>No MCP servers in the library. Add one in the Acquire tab first.</div>
+        : isMobile ? <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <select aria-label="Select a library MCP server to add" value={selectedKey} onChange={(event) => setSelectedKey(event.currentTarget.value)} style={{ width: "100%", height: 36, padding: "0 9px", border: "1px solid var(--border)", borderRadius: 5, background: "var(--bg)", color: "var(--text)", fontSize: 13 }}>
+            <option value="" disabled>Select an MCP server to add</option>
+            {servers.map((server) => <option key={server.serverKey} value={server.serverKey} disabled={installedKeys.has(server.serverKey.toLowerCase())}>{server.name}</option>)}
+          </select>
+          <button type="button" onClick={() => void install(selectedKey)} disabled={!selectedKey || installedKeys.has(selectedKey.toLowerCase()) || installing !== null} style={{ alignSelf: "flex-start", height: 34, padding: "0 12px", border: "1px solid var(--border)", borderRadius: 5, background: "var(--bg-panel)", color: "var(--accent)", cursor: !selectedKey || installedKeys.has(selectedKey.toLowerCase()) || installing !== null ? "not-allowed" : "pointer", fontSize: 12, opacity: !selectedKey || installedKeys.has(selectedKey.toLowerCase()) || installing !== null ? 0.5 : 1 }}>{installing === selectedKey ? "Adding..." : "Add MCP"}</button>
+        </div>
+        : <div style={{ flex: 1, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10, alignContent: "start" }}>{servers.map((server) => { const installed = installedKeys.has(server.serverKey.toLowerCase()); return <button key={server.serverKey} type="button" onClick={() => void install(server.serverKey)} disabled={installed || installing !== null} title={installed ? `${server.name} is already added` : `Add ${server.name} to workspace`} aria-label={installed ? `${server.name} is already added` : `Add ${server.name} to workspace`} style={{ minWidth: 0, height: 36, padding: "0 10px", overflow: "hidden", border: "1px solid var(--border)", borderRadius: 6, background: "var(--bg-panel)", color: installed ? "var(--text-dim)" : "var(--text)", cursor: installed || installing ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 600, textAlign: "left", textOverflow: "ellipsis", whiteSpace: "nowrap", opacity: installed || (installing && installing !== server.serverKey) ? 0.5 : 1 }}>{installing === server.serverKey ? "Adding..." : server.name}</button>; })}</div>}
+  </div>;
+}
+
 function WorkspaceTab({ cwd, refreshKey, isMobile, onClose }: { cwd: string; refreshKey: number; isMobile: boolean; onClose: () => void }) {
   const [servers, setServers] = useState<WorkspaceMcpServerInfo[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [addMode, setAddMode] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [removing, setRemoving] = useState<string | null>(null);
 
   const serverId = (server: WorkspaceMcpServerInfo) => `${server.source}:${server.serverKey}`;
 
@@ -94,7 +165,7 @@ function WorkspaceTab({ cwd, refreshKey, isMobile, onClose }: { cwd: string; ref
     return () => {
       ignore = true;
     };
-  }, [load, refreshKey]);
+  }, [load, refreshKey, reloadKey]);
 
   const active = servers.find((server) => serverId(server) === selected) ?? null;
   const groups = [
@@ -102,6 +173,25 @@ function WorkspaceTab({ cwd, refreshKey, isMobile, onClose }: { cwd: string; ref
     { label: "team project", servers: servers.filter((server) => !server.managedByPack && server.source === "team-project") },
     { label: "pi project", servers: servers.filter((server) => !server.managedByPack && server.source === "pi-project") },
   ].filter((group) => group.servers.length > 0);
+
+  const removeActive = async () => {
+    if (!active || active.source !== "pi-project" || active.managedByPack) return;
+    if (!confirm(`Remove "${active.serverKey}" from this workspace?`)) return;
+    setRemoving(active.serverKey);
+    setError(null);
+    try {
+      const response = await fetch("/api/mcp/servers", {
+        method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cwd, serverKey: active.serverKey }),
+      });
+      const data = await response.json() as { error?: string };
+      if (!response.ok || data.error) throw new Error(data.error ?? `HTTP ${response.status}`);
+      setReloadKey((key) => key + 1);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setRemoving(null);
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
@@ -117,7 +207,7 @@ function WorkspaceTab({ cwd, refreshKey, isMobile, onClose }: { cwd: string; ref
                       {group.servers.map((server) => {
                         const isSelected = serverId(server) === selected;
                         return (
-                          <button key={serverId(server)} type="button" onClick={() => setSelected(serverId(server))} style={{ width: "100%", display: "flex", alignItems: "center", gap: 7, padding: "8px", border: 0, borderRadius: 5, background: isSelected ? "var(--bg-selected)" : "none", color: "var(--text)", cursor: "pointer", textAlign: "left" }} onMouseEnter={(event) => { if (!isSelected) event.currentTarget.style.background = "var(--bg-hover)"; }} onMouseLeave={(event) => { if (!isSelected) event.currentTarget.style.background = "none"; }}>
+                          <button key={serverId(server)} type="button" onClick={() => { setSelected(serverId(server)); setAddMode(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 7, padding: "8px", border: 0, borderRadius: 5, background: isSelected ? "var(--bg-selected)" : "none", color: "var(--text)", cursor: "pointer", textAlign: "left" }} onMouseEnter={(event) => { if (!isSelected) event.currentTarget.style.background = "var(--bg-hover)"; }} onMouseLeave={(event) => { if (!isSelected) event.currentTarget.style.background = "none"; }}>
                             <span style={{ width: 7, height: 7, flexShrink: 0, borderRadius: "50%", background: "var(--accent)", boxShadow: "0 0 4px var(--accent)" }} />
                             <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: isSelected ? 600 : 400 }}>{server.serverKey}</span>
                           </button>
@@ -126,9 +216,15 @@ function WorkspaceTab({ cwd, refreshKey, isMobile, onClose }: { cwd: string; ref
                     </div>
                   ))}
           </div>
+          <div style={{ padding: "8px 6px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
+            <button type="button" onClick={() => { setAddMode(true); setSelected(null); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 6, padding: "7px 8px", border: 0, borderRadius: 5, background: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: 12, textAlign: "left" }} onMouseEnter={(event) => { event.currentTarget.style.background = "var(--bg-hover)"; }} onMouseLeave={(event) => { event.currentTarget.style.background = "none"; }}>
+              <Plus size={13} strokeWidth={2} aria-hidden="true" />
+              Add MCP
+            </button>
+          </div>
         </div>
         <div style={{ flex: 1, minWidth: 0, overflowY: "auto", padding: "0 0 0 4px" }}>
-          {active ? <ServerDetail server={active} /> : !loading && !error && <div style={{ height: "100%", display: "grid", placeItems: "center", color: "var(--text-dim)", fontSize: 13 }}>Select an MCP server</div>}
+          {addMode ? <LibraryMcpPicker cwd={cwd} onInstalled={() => { setAddMode(false); setReloadKey((key) => key + 1); }} /> : active ? <ServerDetail server={active} onRemove={active.source === "pi-project" && !active.managedByPack ? () => void removeActive() : undefined} removing={removing === active.serverKey} /> : !loading && !error && <div style={{ height: "100%", display: "grid", placeItems: "center", color: "var(--text-dim)", fontSize: 13 }}>Select an MCP server</div>}
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "10px 18px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>

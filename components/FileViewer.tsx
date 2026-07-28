@@ -598,6 +598,10 @@ function TextFileViewer({ filePath, cwd, sourceSessionId, onOpenFile }: Props) {
           color: "var(--text-dim)",
           background: "var(--bg)",
           flexShrink: 0,
+          overflowX: "auto",
+          overflowY: "hidden",
+          scrollbarGutter: "stable",
+          whiteSpace: "nowrap",
         }}
       >
         <span style={{ fontFamily: "var(--font-mono)" }} title={filePath}>

@@ -316,26 +316,43 @@ function LibrarySkillPicker({
   cwd: string;
   onInstalled: () => void;
 }) {
+  const isMobile = useIsMobile();
   const [skills, setSkills] = useState<LibrarySkillInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [installing, setInstalling] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [selectedSkillKey, setSelectedSkillKey] = useState("");
+  const [installedKeys, setInstalledKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    let ignore = false;
     setLoading(true);
     setError(null);
-    fetch("/api/skill-library")
-      .then((res) => res.json() as Promise<{ skills?: LibrarySkillInfo[]; error?: string }>)
-      .then((data) => {
-        if (data.error) setError(data.error);
-        else setSkills(data.skills ?? []);
+    void Promise.all([
+      fetch("/api/skill-library").then(async (res) => {
+        const data = await res.json() as { skills?: LibrarySkillInfo[]; error?: string };
+        if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`);
+        return data.skills ?? [];
+      }),
+      fetch(`/api/skills?cwd=${encodeURIComponent(cwd)}`).then(async (res) => {
+        const data = await res.json() as { skills?: Skill[]; error?: string };
+        if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`);
+        return data.skills ?? [];
+      }),
+    ])
+      .then(([librarySkills, workspaceSkills]) => {
+        if (ignore) return;
+        setSkills(librarySkills);
+        setInstalledKeys(new Set(workspaceSkills.map((skill) => skillKeyFromSkill(skill).toLowerCase())));
       })
-      .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch((reason) => !ignore && setError(reason instanceof Error ? reason.message : String(reason)))
+      .finally(() => !ignore && setLoading(false));
+    return () => { ignore = true; };
+  }, [cwd]);
 
   const install = async (skillKey: string) => {
+    if (installedKeys.has(skillKey.toLowerCase())) return;
     setInstalling(skillKey);
     setError(null);
     try {
@@ -356,17 +373,60 @@ function LibrarySkillPicker({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 12 }}>Add Skill from Library</div>
+      {!isMobile && <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 12 }}>Add Skill from Library</div>}
       {error && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 10 }}>{error}</div>}
       {loading ? (
         <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Loading…</div>
       ) : skills.length === 0 ? (
         <div style={{ fontSize: 12, color: "var(--text-dim)" }}>No skills in the library. Add skills in the Acquire tab first.</div>
+      ) : isMobile ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <select
+            aria-label="Select a library skill to add"
+            value={selectedSkillKey}
+            onChange={(event) => setSelectedSkillKey(event.currentTarget.value)}
+            style={{
+              width: "100%",
+              height: 36,
+              padding: "0 9px",
+              border: "1px solid var(--border)",
+              borderRadius: 5,
+              background: "var(--bg)",
+              color: "var(--text)",
+              fontSize: 13,
+            }}
+          >
+            <option value="" disabled>Select a skill to add</option>
+            {skills.map((skill) => (
+              <option key={skill.skillKey} value={skill.skillKey} disabled={installedKeys.has(skill.skillKey.toLowerCase())}>{skill.name}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => void install(selectedSkillKey)}
+            disabled={!selectedSkillKey || installing !== null}
+            style={{
+              alignSelf: "flex-start",
+              height: 34,
+              padding: "0 12px",
+              border: "1px solid var(--border)",
+              borderRadius: 5,
+              background: "var(--bg-panel)",
+              color: "var(--accent)",
+              cursor: !selectedSkillKey || installing !== null ? "not-allowed" : "pointer",
+              fontSize: 12,
+              opacity: !selectedSkillKey || installing !== null ? 0.5 : 1,
+            }}
+          >
+            {installing === selectedSkillKey ? "Adding..." : "Add skill"}
+          </button>
+        </div>
       ) : (
         <div style={{ flex: 1, overflowY: "auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
             {skills.map((s) => {
               const isExpanded = expanded === s.skillKey;
+              const installed = installedKeys.has(s.skillKey.toLowerCase());
               return (
                 <div
                   key={s.skillKey}
@@ -378,24 +438,25 @@ function LibrarySkillPicker({
                     display: "flex",
                     flexDirection: "column",
                     gap: 6,
+                    opacity: installed ? 0.5 : 1,
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{s.name}</span>
                     <button
                       onClick={() => void install(s.skillKey)}
-                      disabled={installing === s.skillKey}
+                      disabled={installed || installing !== null}
                       style={{
                         background: "none",
                         border: "none",
-                        color: installing === s.skillKey ? "var(--accent)" : "var(--accent)",
-                        cursor: installing === s.skillKey ? "not-allowed" : "pointer",
+                        color: "var(--accent)",
+                        cursor: installed || installing !== null ? "not-allowed" : "pointer",
                         fontSize: 12,
                         padding: 0,
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {installing === s.skillKey ? "Adding…" : "Add"}
+                      {installing === s.skillKey ? "Adding…" : installed ? "Added" : "Add"}
                     </button>
                   </div>
                   <div style={{ fontSize: 10, color: "var(--text-dim)", fontFamily: "var(--font-mono)" }}>
@@ -406,13 +467,14 @@ function LibrarySkillPicker({
                   )}
                   <button
                     onClick={() => setExpanded(isExpanded ? null : s.skillKey)}
+                    disabled={installed}
                     style={{
                       alignSelf: "flex-start",
                       fontSize: 10,
                       color: "var(--accent)",
                       background: "none",
                       border: "none",
-                      cursor: "pointer",
+                      cursor: installed ? "not-allowed" : "pointer",
                       padding: 0,
                     }}
                   >
@@ -1263,6 +1325,7 @@ export function SkillsConfig({
               <div
                 style={{
                   flex: 1,
+                  minHeight: 0,
                   display: "flex",
                   flexDirection: isMobile ? "column" : "row",
                   overflow: "hidden",
@@ -1273,7 +1336,7 @@ export function SkillsConfig({
                 <div
                   style={{
                     width: isMobile ? "100%" : 210,
-                    maxHeight: isMobile ? "40vh" : undefined,
+                    maxHeight: isMobile ? "32vh" : undefined,
                     borderRight: isMobile ? "none" : "1px solid var(--border)",
                     borderBottom: isMobile ? "1px solid var(--border)" : "none",
                     display: "flex",
@@ -1436,7 +1499,7 @@ export function SkillsConfig({
                 </div>
 
                 {/* Right: detail */}
-                <div style={{ flex: 1, overflowY: "auto", padding: "0 0 0 4px" }}>
+                <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 0 0 4px" }}>
                   {loading ? null : addMode ? (
                     <LibrarySkillPicker
                       cwd={cwd}
