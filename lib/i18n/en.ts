@@ -1,0 +1,182 @@
+// English translations (default)
+
+const en: Record<string, string> = {
+  // General
+  "general.loading": "Loading...",
+  "general.error": "Error",
+  "general.save": "Save",
+  "general.saving": "Saving...",
+  "general.saved": "Saved",
+  "general.cancel": "Cancel",
+  "general.close": "Close",
+  "general.delete": "Delete",
+  "general.rename": "Rename",
+  "general.search": "Search",
+  "general.filter": "Filter",
+  "general.create": "Create",
+  "general.select": "Select",
+  "general.open": "Open",
+  "general.copy": "Copy",
+  "general.copied": "Copied",
+  "general.noResults": "No results",
+  "general.confirm": "Confirm",
+  "general.name": "Name",
+  "general.path": "Path",
+
+  // App shell / sidebar
+  "app.settings": "Settings",
+  "app.newSession": "New session",
+  "app.hideSidebar": "Hide sidebar",
+  "app.showSidebar": "Show sidebar",
+  "app.fullHistory": "Full history",
+  "app.systemPrompt": "System prompt",
+  "app.systemPromptEmpty": "System prompt is empty (tools are disabled)",
+  "app.systemPromptLoading": "Send a message to load the system prompt",
+  "app.sessionInfo": "Session info",
+  "app.sessionInfoSendFirst": "Send a message or run /session to load session info",
+  "app.workspace": "Workspace",
+  "app.workspaceCount": "Workspace",
+  "app.newWorkspace": "New workspace",
+  "app.selectWorkspace": "Select workspace...",
+  "app.recentSessions": "Recent sessions",
+  "app.noSessions": "No sessions found",
+  "app.refreshSessions": "Refresh sessions",
+  "app.refreshExplorer": "Refresh explorer",
+  "app.explorer": "Explorer",
+  "app.chooseFolder": "Choose folder...",
+  "app.useDefaultDir": "Use default directory",
+  "app.filterProjects": "Filter projects…",
+  "app.noMatchingProjects": "No matching projects",
+  "app.loadingFolders": "Loading folders...",
+  "app.noSubfolders": "This folder has no subfolders.",
+  "app.selectProjectFolder": "Select project folder",
+  "app.browseAccessibleFolder": "Browse any accessible folder.",
+  "app.workspaceFolderName": "Workspace folder name",
+  "app.creating": "Creating...",
+  "app.removeWorkspace": "Remove workspace",
+  "app.removeWorkspaceConfirm": 'Remove "${path}" from Workspace?',
+  "app.selecting": "Selecting...",
+
+  // Navigation & Sidebar
+  "nav.skills": "Skills",
+  "nav.mcp": "MCP",
+  "nav.packs": "Packs",
+  "nav.plugins": "Plugins",
+  "nav.newSession": "New session",
+
+  // Settings modal
+  "settings.title": "Settings",
+  "settings.general": "General",
+  "settings.models": "Models",
+  "settings.language": "Language",
+  "settings.theme": "Theme",
+  "settings.light": "Light",
+  "settings.dark": "Dark",
+  "settings.eyeComfort": "Eye comfort",
+  "settings.switchToLight": "Switch to light mode",
+  "settings.switchToDark": "Switch to dark mode",
+  "settings.switchToEye": "Switch to eye comfort mode",
+  "settings.languageDescription": "Select the display language. Professional terms may remain in English.",
+
+  // Models config
+  "models.title": "Models",
+  "models.configFile": "~/.pi/agent/models.json",
+  "models.addProvider": "+ Add provider",
+  "models.selectProviderOrModel": "Select a provider or model",
+  "models.loading": "Loading…",
+  "models.save": "Save",
+  "models.saving": "Saving…",
+  "models.saved": "Saved",
+  "models.cancel": "Cancel",
+
+  // Skills config
+  "skills.title": "Skills",
+
+  // MCP config
+  "mcp.title": "MCP",
+
+  // Packs config
+  "packs.title": "Packs",
+
+  // Plugins config
+  "plugins.title": "Plugins",
+
+  // Chat / Messages
+  "chat.sendMessage": "Send a message to the agent...",
+  "chat.thinking": "Thinking...",
+  "chat.toolCall": "Tool call",
+  "chat.toolResult": "Tool result",
+  "chat.typeMessage": "Type a message...",
+  "chat.uploadFile": "Upload file",
+  "chat.collapseDetails": "Collapse details",
+  "chat.expandDetails": "Expand details",
+  "chat.stopGeneration": "Stop generation",
+  "chat.regenerate": "Regenerate",
+  "chat.model": "Model",
+  "chat.thinkingLevel": "Thinking level",
+  "chat.tools": "Tools",
+  "chat.compact": "Compact",
+  "chat.newSessionCreated": "New session created",
+
+  // Session info
+  "session.info": "Session Info",
+  "session.name": "Name",
+  "session.file": "File",
+  "session.id": "ID",
+  "session.messages": "Messages",
+  "session.user": "User",
+  "session.assistant": "Assistant",
+  "session.toolCalls": "Tool Calls",
+  "session.toolResults": "Tool Results",
+  "session.total": "Total",
+  "session.tokens": "Tokens",
+  "session.input": "Input",
+  "session.output": "Output",
+  "session.cacheRead": "Cache Read",
+  "session.cacheWrite": "Cache Write",
+  "session.cacheHit": "Cache Hit",
+  "session.cost": "Cost",
+  "session.context": "Context",
+  "session.unknown": "Unknown",
+  "session.copyFilePath": "Copy file path",
+  "session.copySessionId": "Copy session ID",
+  "session.noName": "Unnamed",
+
+  // Git / Review
+  "review.changes": "Changes",
+  "review.history": "History",
+  "review.branch": "Branch",
+  "review.unified": "Unified",
+  "review.split": "Split",
+  "review.noChanges": "No changes",
+  "review.commits": "Commits",
+  "review.commit": "Commit",
+  "review.files": "Files",
+  "review.file": "File",
+  "review.stats": "Stats",
+
+  // File tree
+  "fileTree.title": "File Tree",
+  "fileTree.noFiles": "No files",
+  "fileTree.hideHidden": "Hide hidden files",
+  "fileTree.showHidden": "Show hidden files",
+
+  // Terminal
+  "terminal.title": "Terminal",
+  "terminal.newTerminal": "New terminal",
+  "terminal.noTerminal": "No terminal session",
+
+  // Session time / actions
+  "session.messagesCount": "${count} msgs",
+  "session.justNow": "just now",
+  "session.minutesAgo": "${count}m ago",
+  "session.hoursAgo": "${count}h ago",
+  "session.daysAgo": "${count}d ago",
+  "session.expandForks": "Expand forks",
+  "session.collapseForks": "Collapse forks",
+  "session.deleteConfirm": 'Delete "${title}"?',
+  "session.deleteBtn": "Delete",
+  "session.cancelBtn": "Cancel",
+};
+
+export default en;

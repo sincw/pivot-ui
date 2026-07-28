@@ -3,6 +3,7 @@ import { Noto_Sans_Mono } from "next/font/google";
 import "katex/dist/katex.min.css";
 import "@xterm/xterm/css/xterm.css";
 import "./globals.css";
+import { I18nProvider } from "@/lib/i18n";
 
 const notoSansMono = Noto_Sans_Mono({
   subsets: ["latin", "cyrillic"],
@@ -34,7 +35,9 @@ export default function RootLayout({
         />
       </head>
       <body translate="no" className="notranslate" style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
-        {children}
+        <I18nProvider>
+          {children}
+        </I18nProvider>
       </body>
     </html>
   );
