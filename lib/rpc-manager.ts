@@ -16,6 +16,13 @@ export interface AgentEvent {
   [key: string]: unknown;
 }
 
+export class AgentBusyError extends Error {
+  constructor() {
+    super("Agent is already running");
+    this.name = "AgentBusyError";
+  }
+}
+
 type EventListener = (event: AgentEvent) => void;
 
 type PendingUiResponse = {
@@ -57,6 +64,8 @@ type ExtensionBindingOptions = {
 };
 
 const CODING_TOOL_NAMES = ["read", "bash", "edit", "write", "grep", "find", "ls"];
+const MODEL_START_TIMEOUT_MS = 300_000;
+const MODEL_ABORT_GRACE_MS = 10_000;
 
 // Extensions require a complete Theme, while the web UI applies its own styling.
 class PlainTextTheme extends Theme {
@@ -117,6 +126,7 @@ export class AgentSessionWrapper {
   private forceEmptySystemPrompt = false;
   private unsubscribe: (() => void) | null = null;
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  private modelStartTimer: ReturnType<typeof setTimeout> | null = null;
   private onDestroyCallback: (() => void) | null = null;
   private _alive = true;
 
@@ -141,6 +151,7 @@ export class AgentSessionWrapper {
   start(): void {
     this.unsubscribe = this.inner.subscribe((event: AgentEvent) => {
       this.resetIdleTimer();
+      if (this.isModelProgress(event)) this.clearModelStartTimer();
       if (event.type === "agent_end") {
         invalidateSessionListCache();
       }
@@ -256,6 +267,32 @@ export class AgentSessionWrapper {
     this.idleTimer = setTimeout(() => this.destroy(), 10 * 60 * 1000);
   }
 
+  private isModelProgress(event: AgentEvent): boolean {
+    if (event.type === "tool_execution_start" || event.type === "agent_end") return true;
+    if (event.type !== "message_start" && event.type !== "message_update") return false;
+    const message = event.message as { role?: string } | undefined;
+    return message?.role === "assistant";
+  }
+
+  private clearModelStartTimer(): void {
+    if (!this.modelStartTimer) return;
+    clearTimeout(this.modelStartTimer);
+    this.modelStartTimer = null;
+  }
+
+  private startModelStartTimer(): void {
+    this.clearModelStartTimer();
+    this.modelStartTimer = setTimeout(() => {
+      this.modelStartTimer = null;
+      if (!this.isRunning()) return;
+      this.emit({ type: "prompt_error", errorMessage: "Model did not start responding in time; stopping this run." });
+      void this.inner.abort().catch(() => {});
+      setTimeout(() => {
+        if (this.isRunning()) this.destroy();
+      }, MODEL_ABORT_GRACE_MS);
+    }, MODEL_START_TIMEOUT_MS);
+  }
+
   onEvent(listener: EventListener): () => void {
     this.listeners.push(listener);
     for (const event of this.pendingUiRequests.values()) listener(event);
@@ -279,7 +316,9 @@ export class AgentSessionWrapper {
         // Fire and forget — events come via subscribe
         const promptImages = command.images as Array<{ type: "image"; data: string; mimeType: string }> | undefined;
         const streamingBehavior = command.streamingBehavior as "steer" | "followUp" | undefined;
+        if (this.isRunning()) throw new AgentBusyError();
         this.promptRunning = true;
+        this.startModelStartTimer();
         notifyRunningChange();
         this.inner.prompt(command.message as string, {
           ...(promptImages?.length ? { images: promptImages } : {}),
@@ -287,10 +326,12 @@ export class AgentSessionWrapper {
           source: "rpc",
         }).then(() => {
           this.promptRunning = false;
+          this.clearModelStartTimer();
           if (!streamingBehavior) this.emit({ type: "prompt_done" });
           notifyRunningChange();
         }).catch((error) => {
           this.promptRunning = false;
+          this.clearModelStartTimer();
           invalidateSessionListCache();
           this.emit({
             type: "prompt_error",
@@ -542,11 +583,13 @@ export class AgentSessionWrapper {
     if (!this._alive) return;
     this._alive = false;
     if (this.idleTimer) clearTimeout(this.idleTimer);
+    this.clearModelStartTimer();
     this.unsubscribe?.();
     for (const pending of this.pendingUiResponses.values()) pending.cancel();
     for (const id of Array.from(this.activeCustomUis.keys())) this.closeCustomUi(id, undefined);
     this.pendingUiResponses.clear();
     this.pendingUiRequests.clear();
+    try { this.inner.dispose(); } catch { /* cleanup must not strand the wrapper */ }
     this.onDestroyCallback?.();
     notifyRunningChange();
   }
