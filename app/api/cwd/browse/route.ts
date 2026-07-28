@@ -1,42 +1,46 @@
 import { NextResponse } from "next/server";
-import { mkdirSync, readdirSync, realpathSync, statSync } from "fs";
-import { homedir } from "os";
+import { mkdirSync, opendirSync, realpathSync, statSync } from "fs";
 import { isAbsolute, relative, resolve } from "path";
+
+const DIRECTORY_SCAN_LIMIT = 1_000;
+const DIRECTORY_LIST_LIMIT = 500;
 
 function isWithin(root: string, target: string): boolean {
   const pathFromRoot = relative(root, target);
   return pathFromRoot === "" || (!pathFromRoot.startsWith("..") && !isAbsolute(pathFromRoot));
 }
 
-// GET /api/cwd/browse?path=/home/user/project
-// Lists directories below the user's home directory for the workspace picker.
+// GET /api/cwd/browse?path=/project
+// Lists one directory level for the workspace picker.
 export async function GET(request: Request) {
   const requestedPath = new URL(request.url).searchParams.get("path");
 
   try {
-    const home = realpathSync(homedir());
-    const candidate = requestedPath ? resolve(requestedPath) : home;
-    if (!isWithin(home, candidate)) {
-      return NextResponse.json({ error: "Directories must be inside the home folder" }, { status: 403 });
-    }
-
+    const candidate = requestedPath ? resolve(requestedPath) : "/";
     const directory = realpathSync(candidate);
-    if (!isWithin(home, directory) || !statSync(directory).isDirectory()) {
+    if (!statSync(directory).isDirectory()) {
       return NextResponse.json({ error: "Directory is not available" }, { status: 400 });
     }
 
-    const entries = readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-      try {
-        const childPath = realpathSync(resolve(directory, entry.name));
-        return isWithin(home, childPath) && statSync(childPath).isDirectory()
-          ? [{ name: entry.name, path: childPath }]
-          : [];
-      } catch {
-        return [];
+    const entries: { name: string; path: string }[] = [];
+    const dir = opendirSync(directory);
+    let scanned = 0;
+    try {
+      while (scanned++ < DIRECTORY_SCAN_LIMIT && entries.length < DIRECTORY_LIST_LIMIT) {
+        const entry = dir.readSync();
+        if (!entry) break;
+        try {
+          const childPath = realpathSync(resolve(directory, entry.name));
+          if (statSync(childPath).isDirectory()) entries.push({ name: entry.name, path: childPath });
+        } catch {
+          // Ignore entries that disappear or cannot be inspected.
+        }
       }
-    }).sort((a, b) => a.name.localeCompare(b.name));
+    } finally {
+      dir.closeSync();
+    }
 
-    return NextResponse.json({ home, path: directory, entries });
+    return NextResponse.json({ path: directory, entries: entries.sort((a, b) => a.name.localeCompare(b.name)) });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 400 });
   }
@@ -54,14 +58,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Workspace name must be a single folder name" }, { status: 400 });
     }
 
-    const home = realpathSync(homedir());
     const candidate = resolve(requestedPath);
-    if (!isWithin(home, candidate)) {
-      return NextResponse.json({ error: "Directories must be inside the home folder" }, { status: 403 });
-    }
-
     const directory = realpathSync(candidate);
-    if (!isWithin(home, directory) || !statSync(directory).isDirectory()) {
+    if (!statSync(directory).isDirectory()) {
       return NextResponse.json({ error: "Directory is not available" }, { status: 400 });
     }
 

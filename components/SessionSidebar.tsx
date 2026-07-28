@@ -167,7 +167,6 @@ function PathLabel({ text, style }: { text: string; style?: CSSProperties }) {
 }
 
 interface DirectoryListing {
-  home: string;
   path: string;
   entries: { name: string; path: string }[];
 }
@@ -178,6 +177,7 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
   const [selecting, setSelecting] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
+  const [pathInput, setPathInput] = useState("/");
   const [error, setError] = useState<string | null>(null);
 
   const loadDirectory = useCallback(async (path?: string) => {
@@ -189,6 +189,7 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
       const data = await response.json() as DirectoryListing & { error?: string };
       if (!response.ok || data.error) throw new Error(data.error ?? `HTTP ${response.status}`);
       setListing(data);
+      setPathInput(data.path);
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -201,6 +202,7 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
     setSelecting(false);
     setCreating(false);
     setNewWorkspaceName("");
+    setPathInput("/");
     void loadDirectory();
   }, [open, loadDirectory]);
 
@@ -216,12 +218,12 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
   if (!open || typeof document === "undefined") return null;
 
   const crumbs = listing
-    ? listing.path.slice(listing.home.length).split("/").filter(Boolean).reduce(
+    ? listing.path.split("/").filter(Boolean).reduce(
       (items, name) => [...items, { name, path: `${items[items.length - 1].path}/${name}` }],
-      [{ name: "~", path: listing.home }],
+      [{ name: "/", path: "/" }],
     )
     : [];
-  const displayPath = listing ? (listing.path === listing.home ? "~" : `~${listing.path.slice(listing.home.length)}`) : "~";
+  const displayPath = listing?.path ?? "/";
 
   const chooseDirectory = async () => {
     if (!listing || selecting) return;
@@ -278,7 +280,7 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
       <div className="modal-surface" role="dialog" aria-modal="true" aria-label="Select project folder" style={{ width: "min(720px, 100%)", height: "min(620px, calc(100dvh - 32px))", display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid var(--border)", borderRadius: 8, background: "var(--bg-panel)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: "1px solid var(--border)" }}>
           <Folder size={21} strokeWidth={2} aria-hidden="true" />
-          <div style={{ flex: 1, minWidth: 0 }}><strong style={{ display: "block", fontSize: 16 }}>Select project folder</strong><span style={{ color: "var(--text-muted)", fontSize: 12 }}>Browse folders inside your home directory.</span></div>
+          <div style={{ flex: 1, minWidth: 0 }}><strong style={{ display: "block", fontSize: 16 }}>Select project folder</strong><span style={{ color: "var(--text-muted)", fontSize: 12 }}>Browse any accessible folder.</span></div>
           <button type="button" onClick={onClose} title="Close" aria-label="Close" style={{ display: "grid", placeItems: "center", width: 32, height: 32, padding: 0, background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}><X size={18} aria-hidden="true" /></button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, padding: "10px 16px", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
@@ -287,6 +289,10 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
             <button type="button" onClick={() => void loadDirectory(crumb.path)} style={{ minWidth: 0, padding: "2px 3px", background: "none", border: "none", color: crumb.path === listing?.path ? "var(--text)" : "var(--accent)", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{crumb.name}</button>
           </span>)}
         </div>
+        <form onSubmit={(event) => { event.preventDefault(); void loadDirectory(pathInput); }} style={{ display: "flex", gap: 8, padding: "10px 16px", borderBottom: "1px solid var(--border)" }}>
+          <input value={pathInput} onChange={(event) => setPathInput(event.target.value)} disabled={loading || selecting || creating} aria-label="Folder path" placeholder="/path/to/project" style={{ flex: 1, minWidth: 0, minHeight: 34, padding: "0 9px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text)", font: "12px var(--font-mono)" }} />
+          <button type="submit" disabled={!pathInput.trim() || loading || selecting || creating} style={{ minHeight: 34, padding: "0 13px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text)", cursor: "pointer", opacity: !pathInput.trim() || loading || selecting || creating ? 0.6 : 1 }}>Open</button>
+        </form>
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 8 }}>
           {loading && <div style={{ padding: 14, color: "var(--text-muted)", fontSize: 13 }}>Loading folders...</div>}
           {!loading && error && <div style={{ padding: 14, color: "#dc2626", fontSize: 13 }}>{error}</div>}
