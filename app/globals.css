@@ -3343,9 +3343,10 @@ html.dark .user-message-bubble {
 }
 
 @media (max-width: 640px) {
+  .sidebar-container .sidebar-header,
   .sidebar-container .sidebar-session-section,
   .sidebar-container .sidebar-utility-bar {
-    background: var(--overlay-bg);
+    background: var(--overlay-bg) !important;
   }
 }
 
@@ -4252,6 +4253,5 @@ button.workspace-file-tree-toggle:hover { color: var(--text); }
 }
 
 .git-review-remote-actions { margin-left: auto; }
-
 
 
