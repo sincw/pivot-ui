@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Box, Check, ChevronDown, ChevronRight, CirclePlus, Folder, FolderPlus, GitFork, LoaderCircle, MoreHorizontal, Network, PanelLeftClose, Pencil, PlugZap, RefreshCw, Search, Trash2, X } from "lucide-react";
 import type { SessionInfo } from "@/lib/types";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useI18n } from "@/lib/i18n";
 import { WorkspaceFileTree } from "./WorkspaceFileTree";
 
 interface Props {
@@ -522,6 +523,7 @@ function SidebarNavigationAction({ label, disabled, onClick, children }: { label
 
 export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, initialSessionId, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onOpenFile, explorerRefreshKey, onAtMention, showExplorer = true, onOpenSkills, onOpenMcp, onOpenPlugins, onOpenPacks, onClose }: Props) {
   const isMobile = useIsMobile();
+  const { t } = useI18n();
   const [allSessions, setAllSessions] = useState<SessionInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -985,7 +987,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                         setDropdownOpen(false);
                       }
                     }}
-                    placeholder="Filter projects…"
+                    placeholder={t("app.filterProjects")}
                     autoFocus
                     style={{
                       width: "100%",
@@ -1044,7 +1046,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                   </div>
                 ))}
                 {visibleProjects.length === 0 && projectFilter.trim() && (
-                  <div style={{ padding: "8px 10px", fontSize: 11, color: "var(--text-dim)" }}>No matching projects</div>
+                  <div style={{ padding: "8px 10px", fontSize: 11, color: "var(--text-dim)" }}>{t("app.noMatchingProjects")}</div>
                 )}
               </div>
 
@@ -1084,7 +1086,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         <div className="sidebar-session-list">
           {loading && (
             <div style={{ padding: "16px 14px", color: "var(--text-muted)", fontSize: 12 }}>
-              Loading...
+              {t("general.loading")}
             </div>
           )}
           {error && (
@@ -1094,7 +1096,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           )}
           {!loading && !error && filteredSessions.length === 0 && (
             <div style={{ padding: "16px 14px", color: "var(--text-muted)", fontSize: 12 }}>
-              No sessions found
+              {t("app.noSessions")}
             </div>
           )}
           {sessionTree.map((node) => (

@@ -1252,7 +1252,7 @@ function AddProviderPicker({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function ModelsConfig({ onClose }: { onClose: () => void }) {
+export function ModelsConfig({ onClose, variant = "modal" }: { onClose: () => void; variant?: "modal" | "inline" }) {
   const isMobile = useIsMobile();
   const [config, setConfig] = useState<ModelsJson>({ providers: {} });
   const [loading, setLoading] = useState(true);
@@ -1432,13 +1432,12 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
     );
   })();
 
-  return (
-    <>
-    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-surface" style={{ width: isMobile ? "calc(100vw - 16px)" : 860, maxWidth: "calc(100vw - 16px)", height: isMobile ? "calc(100dvh - 16px)" : "78vh", maxHeight: "calc(100dvh - 16px)", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 10, display: "flex", flexDirection: "column", boxShadow: "0 8px 32px rgba(0,0,0,0.18)", overflow: "hidden" }}>
+  // Build the body content (shared between modal and inline)
+  const bodyContent = (
+    <div className="modal-surface" style={{ width: "100%", maxWidth: "100%", height: "100%", background: "var(--bg)", border: variant === "inline" ? "none" : "1px solid var(--border)", borderRadius: variant === "inline" ? 0 : 10, display: "flex", flexDirection: "column", boxShadow: variant === "inline" ? "none" : "0 8px 32px rgba(0,0,0,0.18)", overflow: "hidden" }}>
 
-        {/* Header */}
+        {variant !== "inline" && (
+        /* Header */
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Models</span>
@@ -1446,6 +1445,7 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
           </div>
           <button onClick={onClose} aria-label="Close models configuration" style={{ display: "grid", placeItems: "center", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "2px 6px" }}><X size={18} aria-hidden="true" /></button>
         </div>
+        )}
 
         {/* Body */}
         <div style={{ flex: 1, display: "flex", flexDirection: isMobile ? "column" : "row", overflow: "hidden" }}>
@@ -1604,6 +1604,31 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </div>
+  );
+
+  if (variant === "inline") {
+    return (
+      <>
+        {bodyContent}
+        {pickerOpen && (
+          <AddProviderPicker
+            oauthProviders={oauthProviders}
+            apiKeyProviders={apiKeyProviders}
+            onSelectOAuth={(id) => setSelection({ type: "oauth", providerId: id })}
+            onSelectApiKey={(id) => setSelection({ type: "apikey", providerId: id })}
+            onAddCustom={addCustomProvider}
+            onClose={() => setPickerOpen(false)}
+          />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      {bodyContent}
     </div>
     {pickerOpen && (
       <AddProviderPicker
@@ -1617,4 +1642,12 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
     )}
     </>
   );
+}
+
+export function ModelsConfigTab({ onClose, onChanged }: { onClose: () => void; onChanged?: () => void }) {
+  const handleClose = () => {
+    onChanged?.();
+    onClose();
+  };
+  return <ModelsConfig onClose={handleClose} variant="inline" />;
 }

@@ -4,9 +4,10 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, Check, Copy, Eye, FileText, Gauge, History, Info, Menu, Moon, PanelLeftClose, RotateCcw, Settings, Sun } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import { SessionSidebar } from "./SessionSidebar";
 import { ChatWindow } from "./ChatWindow";
-import { ModelsConfig } from "./ModelsConfig";
+import { SettingsModal } from "./SettingsModal";
 import { SkillsConfig } from "./SkillsConfig";
 import { McpConfig } from "./McpConfig";
 import { SkillPacksModal } from "./SkillPacksModal";
@@ -29,7 +30,8 @@ export function AppShell() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { theme, toggleTheme } = useTheme();
-  const nextThemeLabel = theme === "light" ? "Switch to dark mode" : theme === "dark" ? "Switch to eye comfort mode" : "Switch to light mode";
+  const { t } = useI18n();
+  const nextThemeLabel = theme === "light" ? t("settings.switchToDark") : theme === "dark" ? t("settings.switchToEye") : t("settings.switchToLight");
   const isMobile = useIsMobile();
   const [selectedSession, setSelectedSession] = useState<SessionInfo | null>(null);
   // When user clicks +, we only store the cwd — no fake session id
@@ -37,7 +39,7 @@ export function AppShell() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [sessionKey, setSessionKey] = useState(0);
   const [explorerRefreshKey, setExplorerRefreshKey] = useState(0);
-  const [modelsConfigOpen, setModelsConfigOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [modelsRefreshKey, setModelsRefreshKey] = useState(0);
   const [skillsConfigOpen, setSkillsConfigOpen] = useState(false);
   const [mcpConfigOpen, setMcpConfigOpen] = useState(false);
@@ -354,12 +356,12 @@ export function AppShell() {
           type="button"
           className="sidebar-settings-action"
           onClick={() => {
-            setModelsConfigOpen(true);
+            setSettingsOpen(true);
             if (isMobile) setSidebarOpen(false);
           }}
         >
           <Settings size={18} strokeWidth={1.8} aria-hidden="true" />
-          <span>Settings</span>
+          <span>{t("app.settings")}</span>
         </button>
       </div>
     </>
@@ -475,8 +477,8 @@ export function AppShell() {
         <div ref={topBarRef} className="workspace-toolbar" style={{ display: "flex", alignItems: "center", flexShrink: 0, borderBottom: "1px solid var(--border)", height: 36, background: "var(--bg-panel)" }}>
           <button
             onClick={handleSidebarToggle}
-            title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
-            aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+            title={sidebarOpen ? t("app.hideSidebar") : t("app.showSidebar")}
+            aria-label={sidebarOpen ? t("app.hideSidebar") : t("app.showSidebar")}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: 36, height: 36, padding: 0,
@@ -511,8 +513,8 @@ export function AppShell() {
               <button
                 onClick={handleViewFullHistory}
                 disabled={!selectedSession}
-                title={selectedSession ? "View full history" : "Full history is available after the session is saved"}
-                aria-label="View full history"
+                title={selectedSession ? t("app.fullHistory") : "Full history is available after the session is saved"}
+                aria-label={t("app.fullHistory")}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -542,7 +544,7 @@ export function AppShell() {
                 }}
               >
                 <History size={13} strokeWidth={1.8} aria-hidden="true" style={{ color: selectedSession ? "var(--text-muted)" : "var(--text-dim)", flexShrink: 0 }} />
-                {!isMobile && <span>Full history</span>}
+                {!isMobile && <span>{t("app.fullHistory")}</span>}
               </button>
               <BranchNavigator
                 tree={branchTree}
@@ -558,8 +560,8 @@ export function AppShell() {
               <button
                 ref={systemBtnRef}
                 onClick={() => toggleTopPanel("system")}
-                title="System prompt"
-                aria-label="System prompt"
+                title={t("app.systemPrompt")}
+                aria-label={t("app.systemPrompt")}
                 aria-pressed={activeTopPanel === "system"}
                 style={{
                   display: "flex", alignItems: "center", gap: 6,
@@ -576,17 +578,17 @@ export function AppShell() {
                 onMouseLeave={(e) => { e.currentTarget.style.color = activeTopPanel === "system" ? "var(--text)" : "var(--text-muted)"; }}
               >
                 <FileText size={13} strokeWidth={1.8} aria-hidden="true" style={{ color: systemPrompt ? "var(--accent)" : "var(--text-dim)", flexShrink: 0 }} />
-                {!isMobile && <span>System</span>}
+                {!isMobile && <span>{t("app.systemPrompt")}</span>}
               </button>
             </div>
           )}
           {/* Session stats — right-aligned in top bar */}
           {showChat && (sessionStats || contextUsage) && (() => {
-            const t = sessionStats?.tokens;
+            const tkn = sessionStats?.tokens;
             const c = sessionStats?.cost ?? 0;
             const fmt = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(0)}k` : String(n);
             const costStr = c > 0 ? (c >= 0.01 ? `$${c.toFixed(2)}` : `<$0.01`) : null;
-            const cacheHitRate = t && t.input + t.cacheRead > 0 ? t.cacheRead / (t.input + t.cacheRead) : null;
+            const cacheHitRate = tkn && tkn.input + tkn.cacheRead > 0 ? tkn.cacheRead / (tkn.input + tkn.cacheRead) : null;
             const cacheHitRateLabel = cacheHitRate === null ? "--" : `${(cacheHitRate * 100).toFixed(1)}%`;
             const showCacheHitRate = cacheHitRate !== null;
 
@@ -601,11 +603,11 @@ export function AppShell() {
             }
 
             const tooltipParts: string[] = [];
-            if (t) {
-              tooltipParts.push(`in: ${t.input.toLocaleString()}`);
-              tooltipParts.push(`out: ${t.output.toLocaleString()}`);
-              tooltipParts.push(`cache read: ${t.cacheRead.toLocaleString()}`);
-              tooltipParts.push(`cache write: ${t.cacheWrite.toLocaleString()}`);
+            if (tkn) {
+              tooltipParts.push(`in: ${tkn.input.toLocaleString()}`);
+              tooltipParts.push(`out: ${tkn.output.toLocaleString()}`);
+              tooltipParts.push(`cache read: ${tkn.cacheRead.toLocaleString()}`);
+              tooltipParts.push(`cache write: ${tkn.cacheWrite.toLocaleString()}`);
               tooltipParts.push(`cache hit: ${cacheHitRateLabel}`);
               if (c > 0) tooltipParts.push(`cost: $${c.toFixed(4)}`);
             }
@@ -619,8 +621,8 @@ export function AppShell() {
               <button
                 type="button"
                 onClick={() => toggleTopPanel("session")}
-                title={tooltip || "Session info"}
-                aria-label="Session info"
+                title={tooltip || t("app.sessionInfo")}
+                aria-label={t("app.sessionInfo")}
                 aria-pressed={activeTopPanel === "session"}
                 style={{
                   marginLeft: "auto",
@@ -640,16 +642,16 @@ export function AppShell() {
                 onMouseLeave={(e) => { e.currentTarget.style.color = activeTopPanel === "session" ? "var(--text)" : "var(--text-muted)"; }}
               >
                 {isMobile && <Info size={14} strokeWidth={1.8} aria-hidden="true" />}
-                {!isMobile && t && t.input > 0 && (
+                {!isMobile && tkn && tkn.input > 0 && (
                   <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <ArrowUp size={12} strokeWidth={1.2} aria-hidden="true" />
-                    {fmt(t.input)}
+                    {fmt(tkn.input)}
                   </span>
                 )}
-                {!isMobile && t && t.output > 0 && (
+                {!isMobile && tkn && tkn.output > 0 && (
                   <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <ArrowDown size={12} strokeWidth={1.2} aria-hidden="true" />
-                    {fmt(t.output)}
+                    {fmt(tkn.output)}
                   </span>
                 )}
                 {showCacheHitRate && (
@@ -703,11 +705,11 @@ export function AppShell() {
                     </div>
                   ) : systemPrompt === "" ? (
                     <div style={{ padding: "10px 16px", fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>
-                      System prompt is empty (tools are disabled)
+                      {t("app.systemPromptEmpty")}
                     </div>
                   ) : (
                     <div style={{ padding: "10px 16px", fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>
-                      Send a message to load the system prompt
+                      {t("app.systemPromptLoading")}
                     </div>
                   )}
                 </div>
@@ -720,33 +722,33 @@ export function AppShell() {
                   padding: "12px 16px",
                 }}>
                   {sessionStats ? (() => {
-                    const sessionRows = [
-                      ...(sessionStats.sessionName ? [{ label: "Name", value: sessionStats.sessionName, copyField: null }] : []),
-                      { label: "File", value: sessionStats.sessionFile ?? "In-memory", copyField: "file" as const },
-                      { label: "ID", value: sessionStats.sessionId, copyField: "id" as const },
+                    const sessionRows: { label: string; value: string; copyField: SessionCopyField | null }[] = [
+                      ...(sessionStats.sessionName ? [{ label: t("session.name"), value: sessionStats.sessionName, copyField: null as SessionCopyField | null }] : []),
+                      { label: t("session.file"), value: sessionStats.sessionFile ?? "In-memory", copyField: "file" as const },
+                      { label: t("session.id"), value: sessionStats.sessionId, copyField: "id" as const },
                     ];
                     const messageRows = [
-                      ["User", sessionStats.userMessages.toLocaleString()],
-                      ["Assistant", sessionStats.assistantMessages.toLocaleString()],
-                      ["Tool Calls", sessionStats.toolCalls.toLocaleString()],
-                      ["Tool Results", sessionStats.toolResults.toLocaleString()],
-                      ["Total", sessionStats.totalMessages.toLocaleString()],
+                      [t("session.user"), sessionStats.userMessages.toLocaleString()],
+                      [t("session.assistant"), sessionStats.assistantMessages.toLocaleString()],
+                      [t("session.toolCalls"), sessionStats.toolCalls.toLocaleString()],
+                      [t("session.toolResults"), sessionStats.toolResults.toLocaleString()],
+                      [t("session.total"), sessionStats.totalMessages.toLocaleString()],
                     ];
                     const tokenRows = [
-                      ["Input", sessionStats.tokens.input.toLocaleString()],
-                      ["Output", sessionStats.tokens.output.toLocaleString()],
-                      ...(sessionStats.tokens.cacheRead > 0 ? [["Cache Read", sessionStats.tokens.cacheRead.toLocaleString()]] : []),
-                      ...(sessionStats.tokens.cacheWrite > 0 ? [["Cache Write", sessionStats.tokens.cacheWrite.toLocaleString()]] : []),
-                      ["Cache Hit", sessionStats.tokens.input + sessionStats.tokens.cacheRead > 0
+                      [t("session.input"), sessionStats.tokens.input.toLocaleString()],
+                      [t("session.output"), sessionStats.tokens.output.toLocaleString()],
+                      ...(sessionStats.tokens.cacheRead > 0 ? [[t("session.cacheRead"), sessionStats.tokens.cacheRead.toLocaleString()]] : []),
+                      ...(sessionStats.tokens.cacheWrite > 0 ? [[t("session.cacheWrite"), sessionStats.tokens.cacheWrite.toLocaleString()]] : []),
+                      [t("session.cacheHit"), sessionStats.tokens.input + sessionStats.tokens.cacheRead > 0
                         ? `${(sessionStats.tokens.cacheRead / (sessionStats.tokens.input + sessionStats.tokens.cacheRead) * 100).toFixed(1)}%`
                         : "--"],
-                      ["Total", sessionStats.tokens.total.toLocaleString()],
+                      [t("session.total"), sessionStats.tokens.total.toLocaleString()],
                     ];
                     const ctx = contextUsage ?? sessionStats.contextUsage;
                     const formatCompact = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(0)}k` : String(n);
                     const extraTokenRows = [
-                      ...(sessionStats.cost > 0 ? [["Cost", `$${sessionStats.cost.toFixed(4)}`]] : []),
-                      ...(ctx?.contextWindow ? [["Context", `${ctx.percent !== null ? `${ctx.percent.toFixed(1)}%` : "?"} / ${formatCompact(ctx.contextWindow)}`]] : []),
+                      ...(sessionStats.cost > 0 ? [[t("session.cost"), `$${sessionStats.cost.toFixed(4)}`]] : []),
+                      ...(ctx?.contextWindow ? [[t("session.context"), `${ctx.percent !== null ? `${ctx.percent.toFixed(1)}%` : "?"} / ${formatCompact(ctx.contextWindow)}`]] : []),
                     ];
                     const section = (
                       title: string,
@@ -783,7 +785,7 @@ export function AppShell() {
                       return (
                         <button
                           type="button"
-                          title={copied ? "Copied" : `Copy ${field === "file" ? "file path" : "session ID"}`}
+                          title={copied ? t("general.copied") : (field === "file" ? t("session.copyFilePath") : t("session.copySessionId"))}
                           onClick={() => handleCopySessionField(field, value)}
                           style={{
                             alignSelf: "start",
@@ -822,7 +824,7 @@ export function AppShell() {
                     };
                     const sessionInfoSection = (
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>Session Info</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>{t("session.info")}</div>
                         <div style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr) auto", columnGap: 12, rowGap: 8, alignItems: "start" }}>
                           {sessionRows.map((row) => (
                             <div key={`session-info:${row.label}`} style={{ display: "contents" }}>
@@ -853,13 +855,13 @@ export function AppShell() {
                         fontFamily: "var(--font-mono)",
                       }}>
                         {sessionInfoSection}
-                        {section("Messages", messageRows)}
-                        {section("Tokens", [...tokenRows, ...extraTokenRows], "right", true)}
+                        {section(t("session.messages"), messageRows)}
+                        {section(t("session.tokens"), [...tokenRows, ...extraTokenRows], "right", true)}
                       </div>
                     );
                   })() : (
                     <div style={{ fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>
-                      Send a message or run /session to load session info
+                      {t("app.sessionInfoSendFirst")}
                     </div>
                   )}
                 </div>
@@ -895,7 +897,7 @@ export function AppShell() {
           ) : showPlaceholder ? (
             activeCwd ? (
               <div className="workspace-placeholder">
-                <span>选择一个会话开始</span>
+                <span>{t("app.selectWorkspace")}</span>
               </div>
             ) : (
               <div className="workspace-placeholder workspace-placeholder-intro">
@@ -918,7 +920,7 @@ export function AppShell() {
         }}
       />
     </div>
-    {modelsConfigOpen && <ModelsConfig onClose={() => { setModelsConfigOpen(false); setModelsRefreshKey((k) => k + 1); }} />}
+    {settingsOpen && <SettingsModal onClose={() => { setSettingsOpen(false); setModelsRefreshKey((k) => k + 1); }} onModelsChanged={() => setModelsRefreshKey((k) => k + 1)} />}
     {skillsConfigOpen && (activeCwd ?? selectedSession?.cwd ?? newSessionCwd) && (
       <SkillsConfig
         cwd={(activeCwd ?? selectedSession?.cwd ?? newSessionCwd)!}
