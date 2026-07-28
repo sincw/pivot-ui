@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, GitFork } from "lucide-react";
 import type { SessionEntry, SessionTreeNode } from "@/lib/types";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   tree: SessionTreeNode[];
@@ -219,6 +220,7 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
 }
 
 export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, containerRef, open: openProp, onToggle, hasSession, compact }: Props) {
+  const { t } = useI18n();
   const [openInternal, setOpenInternal] = useState(false);
   const open = openProp !== undefined ? openProp : openInternal;
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -248,9 +250,9 @@ export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, cont
   }, [onLeafChange]);
 
   const noBranchReason = !hasSession
-    ? "No active session"
+    ? t("nav.noActiveSession")
     : !hasBranch(tree)
-      ? "This session has no branches"
+      ? t("nav.sessionNoBranches")
       : null;
 
   // Find first meaningful node (skip pure linear prefix)
@@ -287,12 +289,12 @@ export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, cont
           }}
           onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = open ? "var(--text)" : "var(--text-muted)"; }}
-          title="Session Tree (not Git branches)"
-          aria-label="Session Tree"
+          title={t("nav.sessionTreeDescription")}
+          aria-label={t("nav.sessionTree")}
           aria-pressed={open}
         >
           {branchIcon}
-          {!compact && <span>Session Tree</span>}
+          {!compact && <span>{t("nav.sessionTree")}</span>}
         </button>
         {open && dropdownPos && createPortal(
           <div className="overlay-surface" style={{
@@ -350,7 +352,7 @@ export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, cont
         }}
       >
         {branchIcon}
-        <span style={{ color: "var(--text-muted)" }}>Session Tree</span>
+        <span style={{ color: "var(--text-muted)" }}>{t("nav.sessionTree")}</span>
         {chevron}
       </button>
 
@@ -382,7 +384,7 @@ export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, cont
             </div>
           ) : (
             <div style={{ padding: "10px 16px", fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>
-              {noBranchReason ?? "This session has no branches"}
+              {noBranchReason ?? t("nav.sessionNoBranches")}
             </div>
           )}
         </div>

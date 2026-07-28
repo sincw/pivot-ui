@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { getFileIcon } from "./FileIcons";
+import { useI18n } from "@/lib/i18n";
 
 export interface Tab {
   id: string;
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab }: Props) {
+  const { t } = useI18n();
   const [hoveredClose, setHoveredClose] = useState<string | null>(null);
 
   return (
@@ -89,7 +91,7 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab }: Props) {
                 flexShrink: 0,
                 transition: "background 0.1s, color 0.1s",
               }}
-              title="Close"
+              title={t("general.close")}
             >
               <X size={10} strokeWidth={1.8} aria-hidden="true" />
             </button>

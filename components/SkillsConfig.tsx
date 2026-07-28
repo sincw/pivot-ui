@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { ArrowUp, ExternalLink, Plus, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useI18n } from "@/lib/i18n";
 import { WorkspacePacks } from "./WorkspacePacks";
 import type {
   SkillInfo as Skill,
@@ -144,6 +145,7 @@ function SkillDetail({
   onCheckUpdate: () => void;
   onUpdate: () => void;
 }) {
+  const { t } = useI18n();
   const label = sourceLabel(skill);
   const enabled = !skill.disableModelInvocation;
 
@@ -189,7 +191,7 @@ function SkillDetail({
 
       {skill.install?.skillsShUrl && (
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-          <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>Source</span>
+          <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{t("general.source")}</span>
           <a
             href={skill.install.skillsShUrl}
             target="_blank"
@@ -242,7 +244,7 @@ function SkillDetail({
                   fontSize: 11,
                 }}
               >
-                Check
+                {t("general.check")}
               </button>
             )}
             {updateStatus?.state === "update-available" && (
@@ -264,7 +266,7 @@ function SkillDetail({
                 }}
               >
                 {checkingUpdate
-                  ? "Checking..."
+                  ? t("general.checking")
                   : updateStatus?.state === "up-to-date"
                     ? "Up to date"
                     : updateStatus?.state === "unsupported"
@@ -288,7 +290,7 @@ function SkillDetail({
                   fontWeight: 600,
                 }}
               >
-                {updating ? "Updating..." : "Update"}
+                {updating ? t("general.updating") : t("general.update")}
               </button>
             )}
           </div>
@@ -297,12 +299,12 @@ function SkillDetail({
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>Name</span>
+        <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{t("general.name")}</span>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--text)" }}>{skill.name}</span>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>Description</span>
+        <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{t("general.description")}</span>
         <span style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.6 }}>{skill.description}</span>
       </div>
     </div>
@@ -316,6 +318,7 @@ function LibrarySkillPicker({
   cwd: string;
   onInstalled: () => void;
 }) {
+  const { t } = useI18n();
   const isMobile = useIsMobile();
   const [skills, setSkills] = useState<LibrarySkillInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -373,16 +376,16 @@ function LibrarySkillPicker({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {!isMobile && <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 12 }}>Add Skill from Library</div>}
+      {!isMobile && <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 12 }}>{t("skills.addFromLibrary")}</div>}
       {error && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 10 }}>{error}</div>}
       {loading ? (
-        <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Loading…</div>
+        <div style={{ fontSize: 12, color: "var(--text-dim)" }}>{t("general.loading")}</div>
       ) : skills.length === 0 ? (
-        <div style={{ fontSize: 12, color: "var(--text-dim)" }}>No skills in the library. Add skills in the Acquire tab first.</div>
+        <div style={{ fontSize: 12, color: "var(--text-dim)" }}>{t("skills.noLibrarySkills")}</div>
       ) : isMobile ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <select
-            aria-label="Select a library skill to add"
+            aria-label={t("skills.selectSkillToAdd")}
             value={selectedSkillKey}
             onChange={(event) => setSelectedSkillKey(event.currentTarget.value)}
             style={{
@@ -396,7 +399,7 @@ function LibrarySkillPicker({
               fontSize: 13,
             }}
           >
-            <option value="" disabled>Select a skill to add</option>
+            <option value="" disabled>{t("skills.selectSkillToAdd")}</option>
             {skills.map((skill) => (
               <option key={skill.skillKey} value={skill.skillKey} disabled={installedKeys.has(skill.skillKey.toLowerCase())}>{skill.name}</option>
             ))}
@@ -418,7 +421,7 @@ function LibrarySkillPicker({
               opacity: !selectedSkillKey || installing !== null ? 0.5 : 1,
             }}
           >
-            {installing === selectedSkillKey ? "Adding..." : "Add skill"}
+            {installing === selectedSkillKey ? "Adding..." : t("skills.addSkill")}
           </button>
         </div>
       ) : (
@@ -491,6 +494,7 @@ function LibrarySkillPicker({
 }
 
 function LibraryImportPanel({ onImported }: { onImported: () => void }) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SkillSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -669,15 +673,15 @@ function LibraryImportPanel({ onImported }: { onImported: () => void }) {
     <div className="skills-market">
       <div className="skills-market-title-row">
         <div>
-          <h2>Install skills</h2>
+          <h2>{t("skills.installTitle")}</h2>
         </div>
       </div>
 
       <div className="skills-market-tabs" role="tablist" aria-label="Skill import method">
         {[
-          ["market", "Browse marketplace"],
-          ["local", "Local install"],
-          ["git", "Git install"],
+          ["market", t("skills.browseMarketplace")],
+          ["local", t("skills.localInstall")],
+          ["git", t("skills.gitInstall")],
         ].map(([key, label]) => (
           <button
             key={key}
@@ -705,9 +709,9 @@ function LibraryImportPanel({ onImported }: { onImported: () => void }) {
           >
             <div className="skills-market-view-switcher" role="tablist" aria-label="Marketplace result order">
               {[
-                ["all-time", "All time"],
-                ["trending", "Trending"],
-                ["hot", "Hot"],
+                ["all-time", t("skills.allTime")],
+                ["trending", t("skills.trending")],
+                ["hot", t("skills.hot")],
               ].map(([key, label]) => (
                 <button
                   key={key}
@@ -725,17 +729,17 @@ function LibraryImportPanel({ onImported }: { onImported: () => void }) {
               ref={inputRef}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search the skills.sh marketplace"
-              aria-label="Search skills marketplace"
+              placeholder={t("skills.searchMarketplace")}
+              aria-label={t("skills.searchMarketplace")}
             />
             <button type="submit" disabled={searching || !query.trim()}>
-              {searching ? "Searching..." : "Search"}
+              {searching ? t("general.searching") : t("general.search")}
             </button>
           </form>
 
           {sources.length > 1 && (
             <div className="skills-source-filters" aria-label="Filter results by source">
-              <span>Source</span>
+              <span>{t("general.source")}</span>
               <button
                 type="button"
                 className={sourceFilter === "all" ? "active" : undefined}
@@ -759,7 +763,7 @@ function LibraryImportPanel({ onImported }: { onImported: () => void }) {
           {searchError ? (
             <div className="skills-market-empty">{searchError}</div>
           ) : searching && results.length === 0 ? (
-            <div className="skills-market-empty">Searching marketplace...</div>
+            <div className="skills-market-empty">{t("skills.searchingMarketplace")}</div>
           ) : (
             <div className="skill-card-grid">
               {visibleResults.map((result) => {
@@ -800,11 +804,11 @@ function LibraryImportPanel({ onImported }: { onImported: () => void }) {
           {totalPages > 1 && (
             <nav className="skills-market-pagination" aria-label="Marketplace pages">
               <button type="button" onClick={() => void loadResults(listing, page - 1)} disabled={searching || page === 1}>
-                Previous
+                {t("general.previous")}
               </button>
               <span>{page} / {totalPages}</span>
               <button type="button" onClick={() => void loadResults(listing, page + 1)} disabled={searching || page === totalPages}>
-                Next
+                {t("general.next")}
               </button>
             </nav>
           )}
@@ -819,7 +823,7 @@ function LibraryImportPanel({ onImported }: { onImported: () => void }) {
             void localImport();
           }}
         >
-          <label htmlFor="library-local-path">Skill directory</label>
+          <label htmlFor="library-local-path">{t("skills.skillDirectory")}</label>
           <div>
             <input
               id="library-local-path"
@@ -828,7 +832,7 @@ function LibraryImportPanel({ onImported }: { onImported: () => void }) {
               placeholder="/path/to/skill-directory containing SKILL.md"
             />
             <button type="submit" disabled={importingLocal || !localPath.trim()}>
-              {importingLocal ? "Importing..." : "Import"}
+              {importingLocal ? t("general.importing") : t("general.import")}
             </button>
           </div>
         </form>
@@ -842,7 +846,7 @@ function LibraryImportPanel({ onImported }: { onImported: () => void }) {
             void gitImport();
           }}
         >
-          <label htmlFor="library-git-url">Git repository</label>
+          <label htmlFor="library-git-url">{t("skills.gitRepository")}</label>
           <div>
             <input
               id="library-git-url"
@@ -851,7 +855,7 @@ function LibraryImportPanel({ onImported }: { onImported: () => void }) {
               placeholder="https://github.com/owner/repo.git"
             />
             <button type="submit" disabled={importingGit || !gitUrl.trim()}>
-              {importingGit ? "Importing..." : "Import all"}
+              {importingGit ? t("general.importing") : t("general.import")}
             </button>
           </div>
         </form>
@@ -861,6 +865,7 @@ function LibraryImportPanel({ onImported }: { onImported: () => void }) {
 }
 
 function LibraryTab() {
+  const { t } = useI18n();
   const [libraryRoot, setLibraryRoot] = useState("");
   const [configuredRoot, setConfiguredRoot] = useState<string | null>(null);
   const [skills, setSkills] = useState<LibrarySkillInfo[]>([]);
@@ -936,14 +941,14 @@ function LibraryTab() {
     <div className="skills-library">
       <div className="skills-library-heading">
         <div>
-          <h2>Library skills</h2>
+          <h2>{t("skills.libraryTitle")}</h2>
         </div>
         <label className="skills-library-search">
-          <span className="sr-only">Search library skills</span>
+          <span className="sr-only">{t("skills.searchLibrary")}</span>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search library skills"
+            placeholder={t("skills.searchLibrary")}
           />
         </label>
       </div>
@@ -955,7 +960,7 @@ function LibraryTab() {
           void saveRoot();
         }}
       >
-        <label htmlFor="skill-library-root">Library directory</label>
+        <label htmlFor="skill-library-root">{t("skills.libraryDirectory")}</label>
         <input
           id="skill-library-root"
           value={libraryRoot}
@@ -963,19 +968,19 @@ function LibraryTab() {
           placeholder="/path/to/skill-library"
         />
         <button type="submit" disabled={saving || !libraryRoot.trim()}>
-          {saving ? "Saving..." : "Save"}
+          {saving ? t("general.saving") : t("general.save")}
         </button>
       </form>
 
-      {!configuredRoot && <div className="skills-library-note">Choose a local directory as your shared skill library.</div>}
+      {!configuredRoot && <div className="skills-library-note">{t("skills.chooseLibraryDirectory")}</div>}
       {error && <div className="skills-market-error">{error}</div>}
 
       {loading ? (
-        <div className="skills-market-empty">Loading library...</div>
+        <div className="skills-market-empty">{t("general.loading")}</div>
       ) : skills.length === 0 ? (
-        <div className="skills-market-empty">No skills in the library yet. Add one from Acquire.</div>
+        <div className="skills-market-empty">{t("skills.libraryEmpty")}</div>
       ) : visibleSkills.length === 0 ? (
-        <div className="skills-market-empty">No library skills match this search.</div>
+        <div className="skills-market-empty">{t("skills.libraryNoMatches")}</div>
       ) : (
         <div className="skill-card-grid">
           {visibleSkills.map((skill) => (
@@ -1011,6 +1016,7 @@ export function SkillsConfig({
   packsRefreshKey?: number;
 }) {
   const isMobile = useIsMobile();
+  const { t } = useI18n();
   const [tab, setTab] = useState<"workspace" | "library" | "acquire">("workspace");
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1198,9 +1204,9 @@ export function SkillsConfig({
   const selectedSkill = skills.find((s) => s.filePath === selected) ?? null;
 
   const tabs: { key: "workspace" | "library" | "acquire"; label: string }[] = [
-    { key: "workspace", label: "Workspace" },
-    { key: "library", label: "Library" },
-    { key: "acquire", label: "Acquire" },
+    { key: "workspace", label: t("app.workspace") },
+    { key: "library", label: t("mcp.library") },
+    { key: "acquire", label: t("mcp.acquire") },
   ];
 
   return (
@@ -1246,7 +1252,7 @@ export function SkillsConfig({
           }}
         >
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Skills</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{t("skills.title")}</span>
             <code
               style={{
                 fontSize: 11,
@@ -1263,6 +1269,7 @@ export function SkillsConfig({
           </div>
           <button
             onClick={onClose}
+            aria-label={t("general.close")}
             style={{
               background: "none",
               border: "none",
@@ -1493,7 +1500,7 @@ export function SkillsConfig({
                       onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
                     >
                       <Plus size={13} strokeWidth={2} aria-hidden="true" />
-                      Add skill
+                      {t("skills.addSkill")}
                     </div>
                   </div>
                 </div>
@@ -1567,7 +1574,7 @@ export function SkillsConfig({
                         fontSize: 12,
                       }}
                     >
-                      {checkingAll ? "Checking..." : "Check updates"}
+                      {checkingAll ? t("general.checking") : t("skills.checkUpdates")}
                     </button>
                   )}
                   {Object.values(updateStatuses).filter((status) => status.state === "update-available").length > 0 && (
@@ -1589,7 +1596,7 @@ export function SkillsConfig({
                     fontSize: 13,
                   }}
                 >
-                  Close
+                  {t("general.close")}
                 </button>
               </div>
             </div>

@@ -9,6 +9,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { copyText } from "@/lib/clipboard";
 import { resolveLocalFileHref } from "@/lib/file-links";
 import { markdownRehypePlugins, markdownRemarkPlugins } from "@/lib/markdown";
+import { useI18n } from "@/lib/i18n";
 
 interface MarkdownBodyProps {
   children: string;
@@ -217,6 +218,7 @@ function MermaidBlock({ code, isStreaming }: { code: string; isStreaming?: boole
 
 function CodeBlock({ code, lang, headerAction }: { code: string; lang: string; headerAction?: ReactNode }) {
   const { isDark } = useTheme();
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
   const copy = () => {
@@ -236,7 +238,7 @@ function CodeBlock({ code, lang, headerAction }: { code: string; lang: string; h
             onClick={copy}
             className="markdown-code-action"
           >
-            {copied ? "copied" : "copy"}
+            {copied ? t("general.copied") : t("general.copy")}
           </button>
         </div>
       </div>

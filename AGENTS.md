@@ -271,6 +271,11 @@ Location: `~/.pi/agent/sessions/<encoded-cwd>/<timestamp>_<uuid>.jsonl`
 --font-mono
 ```
 
+## Localization
+
+- UI strings use `useI18n()` with paired keys in `lib/i18n/en.ts` and `lib/i18n/zh.ts`; keep Skills, MCP, Packs, Plugins, Models, and Provider in English unless directed otherwise.
+- Keep the provider's initial locale as English during SSR and the first client render; read browser/localStorage preference only in `useEffect` to avoid hydration mismatches.
+
 ## Agent skills
 
 ### Issue tracker

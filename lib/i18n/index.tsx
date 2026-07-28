@@ -22,8 +22,7 @@ const I18nContext = createContext<I18nContextValue>({
   t: (key: string) => key,
 });
 
-function getInitialLocale(): Locale {
-  if (typeof window === "undefined") return "en";
+function getPreferredLocale(): Locale {
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored === "en" || stored === "zh") return stored;
@@ -37,7 +36,12 @@ function getInitialLocale(): Locale {
 }
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(getInitialLocale);
+  // Keep SSR and the client's first render identical; restore browser state after hydration.
+  const [locale, setLocaleState] = useState<Locale>("en");
+
+  useEffect(() => {
+    setLocaleState(getPreferredLocale());
+  }, []);
 
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);

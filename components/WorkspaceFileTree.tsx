@@ -5,6 +5,7 @@ import { AtSign, Check, ChevronRight, ChevronUp, Eye, EyeOff, LoaderCircle, Plus
 import { FolderIcon, getFileIcon } from "./FileIcons";
 import { encodeFilePathForApi, getRelativeFilePath, joinFilePath } from "@/lib/file-paths";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useI18n } from "@/lib/i18n";
 
 type FileEntry = { name: string; isDir: boolean };
 type SearchEntry = { path: string; isDir: boolean };
@@ -54,6 +55,7 @@ function isHiddenPath(path: string) {
 }
 
 export function WorkspaceFileTree({ cwd, onOpenFile, refreshKey, revealRequest, onAtMention, showToolbar = true, allowMutations = false }: Props) {
+  const { t } = useI18n();
   const isMobile = useIsMobile();
   const [nodes, setNodes] = useState<TreeNodes>(() => ({ "": rootNode(cwd) }));
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -376,17 +378,17 @@ export function WorkspaceFileTree({ cwd, onOpenFile, refreshKey, revealRequest, 
         <div className="workspace-file-tree-toolbar">
           <label className="workspace-file-tree-search">
             <Search size={14} strokeWidth={1.8} aria-hidden="true" />
-            <input value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder="Search files" aria-label="Search files" />
-            {query && <button type="button" onClick={() => setQuery("")} title="Clear search" aria-label="Clear search"><X size={14} aria-hidden="true" /></button>}
+            <input value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder={t("fileTree.searchFiles")} aria-label={t("fileTree.searchFiles")} />
+            {query && <button type="button" onClick={() => setQuery("")} title={t("general.clearSearch")} aria-label={t("general.clearSearch")}><X size={14} aria-hidden="true" /></button>}
           </label>
-          <button type="button" className="workspace-file-tree-icon-button" onClick={() => setExpanded(new Set())} title="Collapse all folders" aria-label="Collapse all folders"><ChevronUp size={15} aria-hidden="true" /></button>
-          <button type="button" className="workspace-file-tree-icon-button" onClick={refreshVisible} title="Refresh files" aria-label="Refresh files"><RefreshCw size={14} aria-hidden="true" /></button>
-          <button type="button" className={`workspace-file-tree-icon-button${showHidden ? " is-active" : ""}`} onClick={() => setShowHidden((current) => !current)} title={showHidden ? "Hide hidden files" : "Show hidden files"} aria-label={showHidden ? "Hide hidden files" : "Show hidden files"}>{showHidden ? <Eye size={14} aria-hidden="true" /> : <EyeOff size={14} aria-hidden="true" />}</button>
+          <button type="button" className="workspace-file-tree-icon-button" onClick={() => setExpanded(new Set())} title={t("fileTree.collapseAll")} aria-label={t("fileTree.collapseAll")}><ChevronUp size={15} aria-hidden="true" /></button>
+          <button type="button" className="workspace-file-tree-icon-button" onClick={refreshVisible} title={t("fileTree.refreshFiles")} aria-label={t("fileTree.refreshFiles")}><RefreshCw size={14} aria-hidden="true" /></button>
+          <button type="button" className={`workspace-file-tree-icon-button${showHidden ? " is-active" : ""}`} onClick={() => setShowHidden((current) => !current)} title={showHidden ? t("fileTree.hideHidden") : t("fileTree.showHidden")} aria-label={showHidden ? t("fileTree.hideHidden") : t("fileTree.showHidden")}>{showHidden ? <Eye size={14} aria-hidden="true" /> : <EyeOff size={14} aria-hidden="true" />}</button>
           {allowMutations && <div className="workspace-file-tree-new">
-            <button type="button" className="workspace-file-tree-icon-button" onClick={() => setNewMenuOpen((open) => !open)} title="New file or folder" aria-label="New file or folder"><Plus size={15} aria-hidden="true" /></button>
+            <button type="button" className="workspace-file-tree-icon-button" onClick={() => setNewMenuOpen((open) => !open)} title={t("fileTree.newFileOrFolder")} aria-label={t("fileTree.newFileOrFolder")}><Plus size={15} aria-hidden="true" /></button>
             {newMenuOpen && <div role="menu">
-              <button type="button" role="menuitem" onClick={() => startMutation("create-file", selectedPath)}>New file</button>
-              <button type="button" role="menuitem" onClick={() => startMutation("create-folder", selectedPath)}>New folder</button>
+              <button type="button" role="menuitem" onClick={() => startMutation("create-file", selectedPath)}>{t("fileTree.newFile")}</button>
+              <button type="button" role="menuitem" onClick={() => startMutation("create-folder", selectedPath)}>{t("fileTree.newFolder")}</button>
             </div>}
           </div>}
         </div>
@@ -394,17 +396,17 @@ export function WorkspaceFileTree({ cwd, onOpenFile, refreshKey, revealRequest, 
 
       {pendingAction && <form className="workspace-file-tree-edit" onSubmit={(event) => { event.preventDefault(); void submitMutation(); }}>
         <input autoFocus disabled={mutationBusy} value={draftName} onChange={(event) => setDraftName(event.currentTarget.value)} placeholder={pendingAction.action === "rename" ? "New name" : pendingAction.action === "create-file" ? "New file name" : "New folder name"} aria-label={pendingAction.action === "rename" ? "New name" : pendingAction.action === "create-file" ? "New file name" : "New folder name"} />
-        <button type="submit" disabled={mutationBusy} title="Save" aria-label="Save">{mutationBusy ? <LoaderCircle size={14} aria-hidden="true" style={{ animation: "spin 0.8s linear infinite" }} /> : <Check size={14} aria-hidden="true" />}</button>
+        <button type="submit" disabled={mutationBusy} title={t("general.save")} aria-label={t("general.save")}>{mutationBusy ? <LoaderCircle size={14} aria-hidden="true" style={{ animation: "spin 0.8s linear infinite" }} /> : <Check size={14} aria-hidden="true" />}</button>
         <button type="button" disabled={mutationBusy} onClick={() => { setPendingAction(null); setMutationError(""); }} title="Cancel" aria-label="Cancel"><X size={14} aria-hidden="true" /></button>
       </form>}
       {mutationError && <div className="workspace-file-tree-error workspace-file-tree-mutation-error">{mutationError}</div>}
       {revealingPath && <div className="workspace-file-tree-reveal-status" role="status"><span aria-hidden="true" />Revealing {revealingPath}</div>}
 
       {query.trim() && (
-        <div className="workspace-file-tree-results" role="listbox" aria-label="File search results">
-          {search.loading && <div className="workspace-file-tree-empty">Searching...</div>}
+        <div className="workspace-file-tree-results" role="listbox" aria-label={t("fileTree.searchResults")}>
+          {search.loading && <div className="workspace-file-tree-empty">{t("general.searching")}</div>}
           {!search.loading && search.error && <div className="workspace-file-tree-error">{search.error}</div>}
-          {!search.loading && !search.error && search.results.length === 0 && <div className="workspace-file-tree-empty">No matching files</div>}
+          {!search.loading && !search.error && search.results.length === 0 && <div className="workspace-file-tree-empty">{t("fileTree.noMatchingFiles")}</div>}
           {search.results.map((entry) => (
             <button key={`${entry.isDir}:${entry.path}`} type="button" role="option" aria-selected={selectedPath === entry.path} className="workspace-file-tree-result" onClick={() => void reveal(entry.path, entry.isDir, !entry.isDir)} title={entry.path}>
               {entry.isDir ? <FolderIcon size={14} /> : getFileIcon(entry.path, 14)}
@@ -414,7 +416,7 @@ export function WorkspaceFileTree({ cwd, onOpenFile, refreshKey, revealRequest, 
         </div>
       )}
 
-      <div className="workspace-file-tree-scroll" role="tree" aria-label="Workspace files" onContextMenu={(event) => {
+      <div className="workspace-file-tree-scroll" role="tree" aria-label={`${t("app.workspace")} ${t("fileTree.files")}`} onContextMenu={(event) => {
         event.preventDefault();
         const panel = event.currentTarget.closest(".workspace-file-tree");
         if (!panel) return;
@@ -457,9 +459,9 @@ export function WorkspaceFileTree({ cwd, onOpenFile, refreshKey, revealRequest, 
             </div>
           );
         })}
-        {nodes[""]?.loading && rows.length === 0 && <div className="workspace-file-tree-empty">Loading files...</div>}
+        {nodes[""]?.loading && rows.length === 0 && <div className="workspace-file-tree-empty">{t("fileTree.loadingFiles")}</div>}
         {!nodes[""]?.loading && nodes[""].error && <div className="workspace-file-tree-error">{nodes[""].error}</div>}
-        {!nodes[""]?.loading && !nodes[""].error && rows.length === 0 && <div className="workspace-file-tree-empty">No files found</div>}
+        {!nodes[""]?.loading && !nodes[""].error && rows.length === 0 && <div className="workspace-file-tree-empty">{t("fileTree.noFilesFound")}</div>}
       </div>
 
       {contextMenu && (() => {
@@ -469,26 +471,26 @@ export function WorkspaceFileTree({ cwd, onOpenFile, refreshKey, revealRequest, 
         return <div className="workspace-file-tree-context-menu" role="menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
           {!node?.isDir && <button type="button" role="menuitem" onClick={() => { onOpenFile(joinFilePath(cwd, contextMenu.path), name); setContextMenu(null); }}>Open file</button>}
           {allowMutations && <>
-            <button type="button" role="menuitem" disabled={!canMutate} onClick={() => startMutation("create-file", contextMenu.path)}>New file</button>
-            <button type="button" role="menuitem" disabled={!canMutate} onClick={() => startMutation("create-folder", contextMenu.path)}>New folder</button>
+            <button type="button" role="menuitem" disabled={!canMutate} onClick={() => startMutation("create-file", contextMenu.path)}>{t("fileTree.newFile")}</button>
+            <button type="button" role="menuitem" disabled={!canMutate} onClick={() => startMutation("create-folder", contextMenu.path)}>{t("fileTree.newFolder")}</button>
             {contextMenu.path && <>
               <button type="button" role="menuitem" disabled={!canMutate} onClick={() => startMutation("rename", contextMenu.path)}>Rename</button>
-              <button type="button" role="menuitem" className="is-danger" disabled={!canMutate} onClick={() => { setDeleteConfirmPath(contextMenu.path); setContextMenu(null); }}>Delete</button>
+              <button type="button" role="menuitem" className="is-danger" disabled={!canMutate} onClick={() => { setDeleteConfirmPath(contextMenu.path); setContextMenu(null); }}>{t("general.delete")}</button>
             </>}
             <hr />
           </>}
-          <button type="button" role="menuitemcheckbox" aria-checked={showHidden} onClick={() => { setShowHidden((current) => !current); setContextMenu(null); }}>{showHidden ? "Hide hidden files" : "Show hidden files"}</button>
-          <button type="button" role="menuitem" onClick={() => void copyPath(contextMenu.path)}>{copiedPath === contextMenu.path ? "Path copied" : "Copy full path"}</button>
+          <button type="button" role="menuitemcheckbox" aria-checked={showHidden} onClick={() => { setShowHidden((current) => !current); setContextMenu(null); }}>{showHidden ? t("fileTree.hideHidden") : t("fileTree.showHidden")}</button>
+          <button type="button" role="menuitem" onClick={() => void copyPath(contextMenu.path)}>{copiedPath === contextMenu.path ? t("fileTree.pathCopied") : t("fileTree.copyFullPath")}</button>
           {onAtMention && contextMenu.path && <button type="button" role="menuitem" onClick={() => { onAtMention(getRelativeFilePath(joinFilePath(cwd, contextMenu.path), cwd), Boolean(node?.isDir)); setContextMenu(null); }}>Insert into chat</button>}
           <hr />
-          <button type="button" role="menuitem" onClick={() => { void loadDirectory(node?.isDir ? contextMenu.path : parentPath(contextMenu.path), true); setContextMenu(null); }}>Refresh</button>
+          <button type="button" role="menuitem" onClick={() => { void loadDirectory(node?.isDir ? contextMenu.path : parentPath(contextMenu.path), true); setContextMenu(null); }}>{t("general.refresh")}</button>
         </div>;
       })()}
 
       {deleteConfirmPath && <div className="workspace-file-tree-confirm" role="alertdialog" aria-modal="true" aria-label="Confirm deletion">
-        <strong>Delete {nodes[deleteConfirmPath]?.name ?? deleteConfirmPath}?</strong>
+        <strong>{t("general.delete")} {nodes[deleteConfirmPath]?.name ?? deleteConfirmPath}?</strong>
         <span>This cannot be undone.</span>
-        <div><button type="button" disabled={mutationBusy} onClick={() => void deletePath(deleteConfirmPath)}>{mutationBusy ? "Deleting..." : "Delete"}</button><button type="button" disabled={mutationBusy} onClick={() => setDeleteConfirmPath(null)}>Cancel</button></div>
+        <div><button type="button" disabled={mutationBusy} onClick={() => void deletePath(deleteConfirmPath)}>{mutationBusy ? t("general.deleting") : t("general.delete")}</button><button type="button" disabled={mutationBusy} onClick={() => setDeleteConfirmPath(null)}>{t("general.cancel")}</button></div>
       </div>}
     </section>
   );

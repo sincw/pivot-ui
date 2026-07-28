@@ -8,6 +8,7 @@ import type {
   McpAdapterStatusInfo,
   SkillPackInfo,
 } from "@/lib/api-types";
+import { useI18n } from "@/lib/i18n";
 
 export function WorkspacePacks({
   cwd,
@@ -18,6 +19,7 @@ export function WorkspacePacks({
   onApplied: () => void;
   refreshKey?: number;
 }) {
+  const { t } = useI18n();
   const [applied, setApplied] = useState<AppliedPackInfo[]>([]);
   const [workspaceRevision, setWorkspaceRevision] = useState(0);
   const [skipped, setSkipped] = useState<{ packId: string; skillKey?: string; serverKey?: string; reason: string }[]>([]);
@@ -105,8 +107,8 @@ export function WorkspacePacks({
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>Applied packs:</span>
-        {loading && <span style={{ fontSize: 12, color: "var(--text-dim)" }}>Loading…</span>}
+        <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{t("packs.applied")}:</span>
+        {loading && <span style={{ fontSize: 12, color: "var(--text-dim)" }}>{t("general.loading")}</span>}
         {applied.map((pack) => {
           const skippedHere = skipped.filter((item) => item.packId === pack.packId);
           return (
@@ -131,12 +133,12 @@ export function WorkspacePacks({
             onClick={() => setPicking(true)}
             style={{ padding: "3px 10px", borderRadius: 12, border: "1px dashed var(--border)", background: "none", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }}
           >
-            + Apply pack
+            + {t("packs.addOne")}
           </button>
         )}
         {hasMcpPacks && adapter && (
           <span style={{ fontSize: 11, color: adapter.state === "ready" ? "#16a34a" : "#d97706" }}>
-            MCP adapter: {adapter.state}{adapter.version ? ` (${adapter.version})` : ""}
+            {t("packs.mcpAdapter", { state: adapter.state === "ready" ? t("packs.ready") : adapter.state })}{adapter.version ? ` (${adapter.version})` : ""}
           </span>
         )}
       </div>
@@ -200,6 +202,7 @@ function PackPicker({
   applying: boolean;
   adapter: McpAdapterStatusInfo | null;
 }) {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const mcpChange = Boolean(preview?.mcpRelevant);
   const adapterBlocked = mcpChange && adapter !== null && adapter.state !== "ready";
@@ -212,7 +215,7 @@ function PackPicker({
       }}
     >
       <div style={{ width: 420, maxWidth: "calc(100vw - 24px)", maxHeight: "80vh", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 10, padding: 18, display: "flex", flexDirection: "column", gap: 14, overflow: "auto" }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Apply Packs</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>{t("packs.add")}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {packs.map((pack) => {
             const checked = selected.has(pack.id);
@@ -277,21 +280,21 @@ function PackPicker({
             onClick={onClose}
             style={{ padding: "6px 12px", border: "1px solid var(--border)", borderRadius: 6, background: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 13 }}
           >
-            Cancel
+            {t("general.cancel")}
           </button>
           <button
             onClick={() => onPreview(Array.from(selected))}
             disabled={selected.size === 0}
             style={{ padding: "6px 12px", border: "1px solid var(--border)", borderRadius: 6, background: "var(--bg-panel)", color: "var(--text)", cursor: selected.size === 0 ? "not-allowed" : "pointer", opacity: selected.size === 0 ? 0.5 : 1, fontSize: 13 }}
           >
-            Preview
+            {t("general.preview")}
           </button>
           <button
             onClick={() => onApply(Array.from(selected))}
             disabled={!preview?.canApply || applying || adapterBlocked}
             style={{ padding: "6px 14px", border: "none", borderRadius: 6, background: "var(--accent)", color: "#fff", cursor: !preview?.canApply || applying || adapterBlocked ? "not-allowed" : "pointer", opacity: !preview?.canApply || applying || adapterBlocked ? 0.5 : 1, fontSize: 13, fontWeight: 600 }}
           >
-            {applying ? "Applying…" : "Apply"}
+            {applying ? t("packs.adding") : t("packs.add")}
           </button>
         </div>
       </div>

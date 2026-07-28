@@ -6,6 +6,7 @@ import { MarkdownBody } from "./MarkdownBody";
 import { copyText } from "@/lib/clipboard";
 import { parseCompactionSummary } from "@/lib/compaction-summary";
 import { isEmptyThinkingBlock } from "@/lib/message-display";
+import { useI18n } from "@/lib/i18n";
 import { parseUnifiedPatch, type SplitDiffCell } from "@/lib/patch";
 import type {
   AgentMessage,
@@ -144,6 +145,7 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
   prevAssistantEntryId?: string;
   onEditContent?: (content: string) => void;
 }) {
+  const { t } = useI18n();
   const [hovered, setHovered] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -237,7 +239,7 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
           }}>
             <button
               onClick={copyContent}
-              title="Copy message"
+              title={t("message.copyMessage")}
               style={{
                 display: "flex", alignItems: "center", gap: 4,
                 padding: "3px 8px", height: 22,
@@ -257,7 +259,7 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
               ) : (
                 <Copy size={11} strokeWidth={1.8} aria-hidden="true" />
               )}
-              {copied ? "Copied" : "Copy"}
+              {copied ? t("general.copied") : t("general.copy")}
             </button>
           </div>
           {(canFork || canNavigate) && (
@@ -270,7 +272,7 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
               {canNavigate && (
                 <button
                   onClick={() => { onNavigate!(prevAssistantEntryId!); onEditContent?.(content); }}
-                  title="Fork from here — branches within this session"
+                  title={t("message.forkFromHere")}
                   style={{
                     display: "flex", alignItems: "center", gap: 4,
                     padding: "3px 8px", height: 22,
@@ -286,14 +288,14 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
                   onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; }}
                 >
                   <GitFork size={11} strokeWidth={1.8} aria-hidden="true" />
-                  Fork from here
+                  {t("message.forkFromHere")}
                 </button>
               )}
               {canFork && (
                 <button
                   onClick={() => { onFork!(entryId!); }}
                   disabled={forking}
-                  title={forking ? "Creating new session…" : "New session — creates an independent copy from here"}
+                  title={forking ? t("app.creating") : t("message.newSession")}
                   style={{
                     display: "flex", alignItems: "center", gap: 4,
                     padding: "3px 8px", height: 22,
@@ -309,7 +311,7 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
                   onMouseLeave={(e) => { if (!forking) e.currentTarget.style.color = "var(--text-dim)"; }}
                 >
                   <GitFork size={11} strokeWidth={1.8} aria-hidden="true" />
-                  {forking ? "Creating…" : "New session"}
+                  {forking ? t("app.creating") : t("message.newSession")}
                 </button>
               )}
             </div>
@@ -344,6 +346,7 @@ function AssistantMessageView({
   sessionId?: string;
   entryId?: string;
 }) {
+  const { t } = useI18n();
   const time = showTimestamp ? formatTime(message.timestamp) : null;
   const blockItems = (message.content ?? [])
     .map((block, originalIndex) => ({ block, originalIndex }))
@@ -523,7 +526,7 @@ function AssistantMessageView({
         {textContent && !isStreaming && (
           <button
             onClick={copyContent}
-            title="Copy message"
+            title={t("message.copyMessage")}
             style={{
               display: "flex", alignItems: "center", gap: 4,
               padding: "3px 8px", height: 22,
@@ -545,7 +548,7 @@ function AssistantMessageView({
             ) : (
               <Copy size={11} strokeWidth={1.8} aria-hidden="true" />
             )}
-            {copied ? "Copied" : "Copy"}
+            {copied ? t("general.copied") : t("general.copy")}
           </button>
         )}
         {time && !isStreaming && (

@@ -6,6 +6,7 @@ import { TabBar, type Tab } from "../TabBar";
 import { FileTab } from "./FileTab";
 import { getRightPanelTool, rightPanelTools } from "./tool-registry";
 import type { FilePanelTab, RightPanelHandle, RightPanelTab, ToolPanelTab } from "./types";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   workspaceCwd: string | null;
@@ -51,12 +52,27 @@ function FullscreenIcon({ exit = false }: { exit?: boolean }) {
   return exit ? <Minimize2 size={18} aria-hidden="true" /> : <Maximize2 size={18} aria-hidden="true" />;
 }
 
+function toolLabel(t: ReturnType<typeof useI18n>["t"], toolId: string) {
+  return t(`panel.${toolId === "file-tree" ? "fileTree" : toolId}`);
+}
+
+function toolDescription(t: ReturnType<typeof useI18n>["t"], toolId: string) {
+  return t(`panel.${toolId === "file-tree" ? "fileTree" : toolId}Description`);
+}
+
+function localizedToolTabLabel(t: ReturnType<typeof useI18n>["t"], tab: ToolPanelTab, toolId: string) {
+  if (!tab.label) return toolLabel(t, toolId);
+  const defaultTerminal = tab.label.match(/^(?:Terminal|\u7ec8\u7aef)( \d+)?$/);
+  return toolId === "terminal" && defaultTerminal ? `${toolLabel(t, toolId)}${defaultTerminal[1] ?? ""}` : tab.label;
+}
+
 function ToolLauncher({ disabled, onOpenTool }: { disabled: boolean; onOpenTool: (toolId: string) => void }) {
+  const { t } = useI18n();
   return (
     <div className="right-panel-launcher">
       <div className="right-panel-launcher-heading">
-        <h2>开始使用 Pivot UI </h2>
-        <p>选择一个工具开始你的智能开发之旅</p>
+        <h2>{t("panel.welcome")}</h2>
+        <p>{t("panel.welcomeDescription")}</p>
       </div>
       <div className="right-panel-launcher-list">
         {rightPanelTools.map((tool) => {
@@ -65,8 +81,8 @@ function ToolLauncher({ disabled, onOpenTool }: { disabled: boolean; onOpenTool:
             <button key={tool.id} type="button" className="right-panel-launcher-item" disabled={disabled} onClick={() => onOpenTool(tool.id)}>
               <span className="right-panel-launcher-icon"><Icon size={25} /></span>
               <span>
-                <strong>新建{tool.label}</strong>
-                <small>{tool.description}</small>
+                <strong>{t("panel.newToolLabel", { tool: toolLabel(t, tool.id) })}</strong>
+                <small>{toolDescription(t, tool.id)}</small>
               </span>
             </button>
           );
@@ -84,6 +100,7 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
   onAtMention,
   onPanelOpened,
 }, ref) {
+  const { t } = useI18n();
   const [fileTabs, setFileTabs] = useState<FilePanelTab[]>([]);
   const [toolTabs, setToolTabs] = useState<ToolPanelTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
@@ -220,12 +237,12 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
         type: "tool",
         toolId,
         cwd: workspaceCwd,
-        ...(tool.allowMultipleTabs ? { label: `${tool.label} ${previous.filter((tab) => tab.toolId === toolId).length + 1}` } : {}),
+        ...(tool.allowMultipleTabs ? { label: `${toolLabel(t, toolId)} ${previous.filter((tab) => tab.toolId === toolId).length + 1}` } : {}),
       }]);
     setActiveTabId(id);
     setMenuOpen(false);
     openPanel();
-  }, [openPanel, workspaceCwd]);
+  }, [openPanel, t, workspaceCwd]);
 
   const revealInFileTree = useCallback((filePath: string) => {
     if (!workspaceCwd) return;
@@ -278,7 +295,7 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
     const tool = getRightPanelTool(tab.toolId);
     if (!tool) return [];
     const Icon = tool.Icon;
-    return [{ id: tab.id, label: tab.label ?? tool.label, filePath: tab.cwd, icon: <Icon size={14} /> }];
+    return [{ id: tab.id, label: localizedToolTabLabel(t, tab, tool.id), filePath: tab.cwd, icon: <Icon size={14} /> }];
   });
   const activeToolTab = toolTabs.find((tab) => tab.id === activeTabId) ?? null;
   const activeTool = activeToolTab ? getRightPanelTool(activeToolTab.toolId) : null;
@@ -293,7 +310,7 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
       >
         <div className="right-panel-toolbar">
           <div className="right-panel-toolbar-actions">
-            <button type="button" className="right-panel-action" onClick={() => { setPanelFullscreen(false); setPanelOpen(false); setMenuOpen(false); }} title="关闭工具面板" aria-label="关闭工具面板">
+            <button type="button" className="right-panel-action" onClick={() => { setPanelFullscreen(false); setPanelOpen(false); setMenuOpen(false); }} title={t("panel.close")} aria-label={t("panel.close")}>
               <PanelIcon size={16} />
             </button>
           </div>
@@ -308,20 +325,20 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
             )}
           </div>
           <div ref={menuRef} className="right-panel-toolbar-actions">
-            <button type="button" className="right-panel-action" onClick={toggleFullscreen} title={panelFullscreen ? "退出全屏" : "全屏"} aria-label={panelFullscreen ? "退出全屏" : "全屏"}>
+            <button type="button" className="right-panel-action" onClick={toggleFullscreen} title={panelFullscreen ? t("panel.exitFullscreen") : t("panel.fullscreen")} aria-label={panelFullscreen ? t("panel.exitFullscreen") : t("panel.fullscreen")}>
               <FullscreenIcon exit={panelFullscreen} />
             </button>
-            <button type="button" className="right-panel-action" onClick={() => setMenuOpen((open) => !open)} title="新建工具" aria-label="新建工具" aria-expanded={menuOpen}>
+            <button type="button" className="right-panel-action" onClick={() => setMenuOpen((open) => !open)} title={t("panel.newTool")} aria-label={t("panel.newTool")} aria-expanded={menuOpen}>
               <AddToolIcon />
             </button>
             {menuOpen && (
-              <div className="right-panel-create-menu" role="menu" aria-label="新建工具">
+              <div className="right-panel-create-menu" role="menu" aria-label={t("panel.newTool")}>
                 {rightPanelTools.map((tool) => {
                   const Icon = tool.Icon;
                   return (
                     <button key={tool.id} type="button" role="menuitem" disabled={!workspaceCwd} onClick={() => openTool(tool.id)}>
                       <Icon size={17} />
-                      <span>新建{tool.label}</span>
+                      <span>{t("panel.newToolLabel", { tool: toolLabel(t, tool.id) })}</span>
                     </button>
                   );
                 })}
@@ -335,7 +352,7 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
             <div className="right-panel-tool-content">
               <ActiveToolComponent
                 tabId={activeToolTab.id}
-                tabLabel={activeToolTab.label ?? activeTool.label}
+                tabLabel={localizedToolTabLabel(t, activeToolTab, activeTool.id)}
                 cwd={activeToolTab.cwd}
                 projectRoot={workspaceProjectRoot ?? activeToolTab.cwd}
                 sourceSessionId={sourceSessionId}
@@ -354,7 +371,7 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
         </div>
       </div>
       {!panelOpen && (
-        <button type="button" className="right-panel-open-button" onClick={openPanel} title="打开工具面板" aria-label="打开工具面板">
+        <button type="button" className="right-panel-open-button" onClick={openPanel} title={t("panel.open")} aria-label={t("panel.open")}>
           <PanelLeftClose size={17} aria-hidden="true" />
         </button>
       )}

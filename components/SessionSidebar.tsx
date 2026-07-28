@@ -173,6 +173,7 @@ interface DirectoryListing {
 }
 
 function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onClose: () => void; onSelect: (path: string) => Promise<string | null> }) {
+  const { t } = useI18n();
   const [listing, setListing] = useState<DirectoryListing | null>(null);
   const [loading, setLoading] = useState(false);
   const [selecting, setSelecting] = useState(false);
@@ -282,7 +283,7 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: "1px solid var(--border)" }}>
           <Folder size={21} strokeWidth={2} aria-hidden="true" />
           <div style={{ flex: 1, minWidth: 0 }}><strong style={{ display: "block", fontSize: 16 }}>Select project folder</strong><span style={{ color: "var(--text-muted)", fontSize: 12 }}>Browse any accessible folder.</span></div>
-          <button type="button" onClick={onClose} title="Close" aria-label="Close" style={{ display: "grid", placeItems: "center", width: 32, height: 32, padding: 0, background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}><X size={18} aria-hidden="true" /></button>
+          <button type="button" onClick={onClose} title={t("general.close")} aria-label={t("general.close")} style={{ display: "grid", placeItems: "center", width: 32, height: 32, padding: 0, background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}><X size={18} aria-hidden="true" /></button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, padding: "10px 16px", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
           {crumbs.map((crumb, index) => <span key={crumb.path} style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
@@ -297,7 +298,7 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 8 }}>
           {loading && <div style={{ padding: 14, color: "var(--text-muted)", fontSize: 13 }}>Loading folders...</div>}
           {!loading && error && <div style={{ padding: 14, color: "#dc2626", fontSize: 13 }}>{error}</div>}
-          {!loading && !error && listing?.entries.length === 0 && <div style={{ padding: 14, color: "var(--text-muted)", fontSize: 13 }}>This folder has no subfolders.</div>}
+          {!loading && !error && listing?.entries.length === 0 && <div style={{ padding: 14, color: "var(--text-muted)", fontSize: 13 }}>{t("app.noSubfolders")}</div>}
           {!loading && listing?.entries.map((entry) => <button key={entry.path} type="button" onClick={() => void loadDirectory(entry.path)} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: 40, padding: "0 10px", background: "none", border: "none", borderRadius: 5, color: "var(--text)", cursor: "pointer", textAlign: "left" }}>
             <Folder size={18} strokeWidth={2} aria-hidden="true" style={{ color: "var(--accent)", flexShrink: 0 }} />
             <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13 }}>{entry.name}</span>
@@ -307,12 +308,12 @@ function DirectoryPickerModal({ open, onClose, onSelect }: { open: boolean; onCl
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", padding: "12px 16px", borderTop: "1px solid var(--border)" }}>
           <span style={{ flex: "1 1 100%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text-muted)", font: "12px var(--font-mono)" }}>{displayPath}</span>
           <form onSubmit={(event) => { event.preventDefault(); void createWorkspace(); }} style={{ display: "flex", flex: "1 1 280px", minWidth: 0, gap: 8 }}>
-            <input value={newWorkspaceName} onChange={(event) => setNewWorkspaceName(event.target.value)} disabled={creating || selecting} aria-label="Workspace folder name" placeholder="Workspace folder name" style={{ flex: 1, minWidth: 0, minHeight: 34, padding: "0 9px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text)", font: "12px var(--font-mono)" }} />
-            <button type="submit" disabled={!listing || !newWorkspaceName.trim() || creating || selecting} style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 34, padding: "0 13px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text)", cursor: creating ? "wait" : "pointer", opacity: !listing || !newWorkspaceName.trim() || selecting ? 0.6 : 1 }}><FolderPlus size={15} aria-hidden="true" />{creating ? "Creating..." : "Create"}</button>
+            <input value={newWorkspaceName} onChange={(event) => setNewWorkspaceName(event.target.value)} disabled={creating || selecting} aria-label={t("app.workspaceFolderName")} placeholder={t("app.workspaceFolderName")} style={{ flex: 1, minWidth: 0, minHeight: 34, padding: "0 9px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text)", font: "12px var(--font-mono)" }} />
+            <button type="submit" disabled={!listing || !newWorkspaceName.trim() || creating || selecting} style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 34, padding: "0 13px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text)", cursor: creating ? "wait" : "pointer", opacity: !listing || !newWorkspaceName.trim() || selecting ? 0.6 : 1 }}><FolderPlus size={15} aria-hidden="true" />{creating ? t("app.creating") : t("general.create")}</button>
           </form>
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: 8, marginLeft: "auto" }}>
-            <button type="button" onClick={onClose} style={{ minHeight: 34, padding: "0 13px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text)", cursor: "pointer" }}>Cancel</button>
-            <button type="button" onClick={() => void chooseDirectory()} disabled={!listing || loading || selecting || creating} style={{ minHeight: 34, padding: "0 13px", background: "var(--accent)", border: "1px solid var(--accent)", borderRadius: 5, color: "#fff", cursor: selecting ? "wait" : "pointer", opacity: !listing || loading || creating ? 0.6 : 1 }}>{selecting ? "Selecting..." : "Select"}</button>
+            <button type="button" onClick={onClose} style={{ minHeight: 34, padding: "0 13px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text)", cursor: "pointer" }}>{t("general.cancel")}</button>
+            <button type="button" onClick={() => void chooseDirectory()} disabled={!listing || loading || selecting || creating} style={{ minHeight: 34, padding: "0 13px", background: "var(--accent)", border: "1px solid var(--accent)", borderRadius: 5, color: "#fff", cursor: selecting ? "wait" : "pointer", opacity: !listing || loading || creating ? 0.6 : 1 }}>{selecting ? t("app.selecting") : t("general.select")}</button>
           </div>
         </div>
       </div>
@@ -846,13 +847,13 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   }, [dropdownOpen, isMobile, showProjectFilter, visibleProjects.length]);
 
   const handleWorkspaceRemove = useCallback((project: string) => {
-    if (!confirm(`Remove "${displayCwd(project, homeDir)}" from Workspace?`)) return;
+    if (!confirm(t("app.removeWorkspaceConfirm", { path: displayCwd(project, homeDir) }))) return;
     setHiddenWorkspaces((current) => new Set(current).add(project));
     setCustomWorkspaces((current) => current.filter((item) => item !== project));
     if (project === selectedProject) {
       setSelectedCwd(workspaceProjects.find((candidate) => candidate !== project) ?? null);
     }
-  }, [homeDir, selectedProject, workspaceProjects]);
+  }, [homeDir, selectedProject, t, workspaceProjects]);
 
   const filteredSessions = selectedProject
     ? allSessions.filter((s) => (s.projectRoot ?? s.cwd) === selectedProject)
@@ -883,21 +884,21 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
               type="button"
               className="sidebar-header-icon"
               onClick={() => loadSessions(false)}
-              title="Refresh sessions"
-              aria-label="Refresh sessions"
+              title={t("app.refreshSessions")}
+              aria-label={t("app.refreshSessions")}
             >
               {sessionRefreshDone ? <Check size={15} strokeWidth={2.5} color="#4ade80" aria-hidden="true" /> : <RefreshCw size={15} strokeWidth={1.8} aria-hidden="true" />}
             </button>
             {onClose && (
-              <button type="button" className="sidebar-close-button" onClick={onClose} title="Close navigation" aria-label="Close navigation">
+              <button type="button" className="sidebar-close-button" onClick={onClose} title={t("app.closeNavigation")} aria-label={t("app.closeNavigation")}>
                 <PanelLeftClose size={17} strokeWidth={1.8} aria-hidden="true" />
               </button>
             )}
           </div>
         </div>
 
-        <nav className="sidebar-primary-navigation" aria-label="Workspace actions">
-          <SidebarNavigationAction label="New session" disabled={!selectedCwd} onClick={handleNewSession}>
+        <nav className="sidebar-primary-navigation" aria-label={t("app.workspace")}>
+          <SidebarNavigationAction label={t("nav.newSession")} disabled={!selectedCwd} onClick={handleNewSession}>
             <CirclePlus size={19} strokeWidth={1.8} aria-hidden="true" />
           </SidebarNavigationAction>
           <SidebarNavigationAction label="Skills" disabled={!selectedCwd || !onOpenSkills} onClick={() => onOpenSkills?.()}>
@@ -916,15 +917,15 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
 
         <div className="sidebar-section-label sidebar-workspace-heading">
           <span className="sidebar-workspace-title">
-            Workspace
+            {t("app.workspace")}
             <span className="sidebar-workspace-count">{workspaceProjects.length}</span>
           </span>
           <button
             type="button"
             className="sidebar-workspace-add"
             onClick={handleNewWorkspace}
-            title="New workspace"
-            aria-label="New workspace"
+            title={t("app.newWorkspace")}
+            aria-label={t("app.newWorkspace")}
           >
             <FolderPlus size={14} strokeWidth={1.8} aria-hidden="true" />
           </button>
@@ -956,7 +957,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                 onClick={() => setDropdownOpen(true)}
               >
                 <Folder size={17} strokeWidth={1.8} aria-hidden="true" />
-                <span>{initialSessionId && !restoredRef.current ? "" : "Select workspace..."}</span>
+                <span>{initialSessionId && !restoredRef.current ? "" : t("app.selectWorkspace")}</span>
               </button>
             )}
           </div>
@@ -1037,8 +1038,8 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                     <button
                       type="button"
                       onClick={() => handleWorkspaceRemove(project)}
-                      title="Remove workspace"
-                      aria-label={`Remove ${displayCwd(project, homeDir)} workspace`}
+                      title={t("app.removeWorkspace")}
+                      aria-label={t("app.removeWorkspace")}
                       style={{ display: "grid", placeItems: "center", width: 32, flex: "0 0 32px", padding: 0, background: "var(--bg)", border: "none", color: "var(--text-dim)", cursor: "pointer" }}
                     >
                       <Trash2 size={15} strokeWidth={1.8} aria-hidden="true" />
@@ -1073,12 +1074,12 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       {/* Recent conversations */}
       <div className="sidebar-session-section" style={{ flex: explorerOpen && (selectedCwdProp || selectedCwd) ? "1 1 0" : "1 1 auto", minHeight: 80, background: isMobile ? "var(--overlay-bg)" : undefined }}>
         <div className="sidebar-session-heading">
-          <span style={{ paddingLeft: 10 }}>Recent sessions</span>
+          <span style={{ paddingLeft: 10 }}>{t("app.recentSessions")}</span>
           <button
             type="button"
             onClick={() => loadSessions(false)}
-            title="Refresh sessions"
-            aria-label="Refresh sessions"
+            title={t("app.refreshSessions")}
+            aria-label={t("app.refreshSessions")}
           >
             <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" />
           </button>
@@ -1161,7 +1162,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                 if (explorerRefreshTimerRef.current) clearTimeout(explorerRefreshTimerRef.current);
                 explorerRefreshTimerRef.current = setTimeout(() => setExplorerRefreshDone(false), 2000);
               }}
-              title="Refresh explorer"
+              title={t("app.refreshExplorer")}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
                 width: 26, height: 26, padding: 0, marginRight: 6,
@@ -1342,6 +1343,7 @@ function SessionItem({
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }) {
+  const { t } = useI18n();
   const [hovered, setHovered] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
@@ -1572,7 +1574,7 @@ function SessionItem({
               </button>
               <button
                 onClick={handleDeleteClick}
-                title="Delete"
+                title={t("general.delete")}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
                   width: 32, height: 32, padding: 0,

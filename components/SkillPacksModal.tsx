@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useI18n } from "@/lib/i18n";
 import type {
   LibrarySkillInfo,
   LibraryMcpServerInfo,
@@ -30,6 +31,7 @@ export function SkillPacksModal({
   onClose: () => void;
 }) {
   const isMobile = useIsMobile();
+  const { t } = useI18n();
   const [packs, setPacks] = useState<SkillPackInfo[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<PackDetail | null>(null);
@@ -169,15 +171,15 @@ export function SkillPacksModal({
       >
         <header className="skill-packs-modal-header">
           <div>
-            <h2>Skill Packs</h2>
+            <h2>{t("packs.title")}</h2>
             <span>{packs.length} pack{packs.length === 1 ? "" : "s"}</span>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="skill-packs-close"
-            title="Close skill packs"
-            aria-label="Close skill packs"
+            title={t("general.close")}
+            aria-label={t("general.close")}
           >
             <X size={18} aria-hidden="true" />
           </button>
@@ -227,6 +229,7 @@ function ManageTab({
   onSave: (form: PackForm) => void;
   onDelete: () => void;
 }) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const visiblePacks = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -241,17 +244,17 @@ function ManageTab({
       <aside className="skill-packs-sidebar">
         <div className="skill-packs-sidebar-toolbar">
           <div className="skill-packs-sidebar-heading">
-            <span>Packs</span>
+            <span>{t("packs.title")}</span>
             <span>{packs.length}</span>
           </div>
-          <label className="sr-only" htmlFor="skill-pack-search">Search packs</label>
+          <label className="sr-only" htmlFor="skill-pack-search">{t("packs.search")}</label>
           <div className="skill-packs-search">
             <Search size={16} strokeWidth={2} aria-hidden="true" />
             <input
               id="skill-pack-search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search packs"
+              placeholder={t("packs.search")}
             />
           </div>
         </div>
@@ -259,7 +262,7 @@ function ManageTab({
         <div className="skill-packs-list">
           {visiblePacks.length === 0 ? (
             <p className="skill-packs-list-empty">
-              {packs.length === 0 ? "No packs yet" : "No matching packs"}
+              {packs.length === 0 ? t("packs.noPacks") : t("packs.noMatches")}
             </p>
           ) : (
             visiblePacks.map((pack) => {
@@ -290,7 +293,7 @@ function ManageTab({
 
         <div className="skill-packs-sidebar-footer">
           <button type="button" className="skill-packs-new" onClick={() => void onCreate()} disabled={loading}>
-            + New pack
+            + {t("packs.new")}
           </button>
         </div>
       </aside>
@@ -300,7 +303,7 @@ function ManageTab({
       <main className="skill-packs-editor">
         {!detail ? (
           <div className="skill-packs-editor-empty">
-            {loading ? "Loading packs..." : "Select a pack to edit"}
+            {loading ? t("packs.loading") : t("packs.selectToEdit")}
           </div>
         ) : (
           <PackEditor
@@ -333,6 +336,7 @@ function PackEditor({
   onSave: (form: PackForm) => void;
   onDelete: () => void;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState(detail.name);
   const [description, setDescription] = useState(detail.description);
   const [skills, setSkills] = useState<{ skillKey: string; contentHash: string }[]>(
@@ -364,35 +368,35 @@ function PackEditor({
       <div className="skill-pack-form">
       <div className="skill-pack-form-fields">
         <label>
-          <span>Name</span>
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Pack name" />
+          <span>{t("packs.name")}</span>
+          <input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("packs.namePlaceholder")} />
         </label>
         <label>
-          <span>Description</span>
+          <span>{t("packs.description")}</span>
           <input
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            placeholder="Describe this pack"
+            placeholder={t("packs.descriptionPlaceholder")}
           />
         </label>
       </div>
 
       <section className="skill-pack-section">
         <div className="skill-pack-section-heading">
-          <span>Included skills</span>
+          <span>{t("packs.includedSkills")}</span>
           <LibraryPicker
             compact
             items={availableSkills}
             getKey={(skill) => skill.skillKey}
-            label="Add skill"
-            emptyLabel="No available skills"
+            label={t("packs.addSkill")}
+            emptyLabel={t("packs.noAvailableSkills")}
             disabled={saving}
             onPick={(skill) => setSkills((current) => [...current, { skillKey: skill.skillKey, contentHash: skill.contentHash }])}
           />
           <span className="skill-pack-count">{skills.length}</span>
         </div>
         {skills.length === 0 ? (
-          <p className="skill-pack-empty">No skills in this pack</p>
+          <p className="skill-pack-empty">{t("packs.noSkills")}</p>
         ) : (
           <div className="skill-pack-item-list">
             {skills.map((s, idx) => {
@@ -421,20 +425,20 @@ function PackEditor({
 
       <section className="skill-pack-section">
         <div className="skill-pack-section-heading">
-          <span>MCP servers</span>
+          <span>{t("packs.mcpServers")}</span>
           <LibraryPicker
             compact
             items={availableMcpServers}
             getKey={(server) => server.serverKey}
-            label="Add MCP server"
-            emptyLabel="No available MCP servers"
+            label={t("packs.addMcpServer")}
+            emptyLabel={t("packs.noAvailableMcpServers")}
             disabled={saving}
             onPick={(server) => setMcpServers((current) => [...current, { serverKey: server.serverKey, configHash: server.configHash }])}
           />
           <span className="skill-pack-count">{mcpServers.length}</span>
         </div>
         {mcpServers.length === 0 ? (
-          <p className="skill-pack-empty">No MCP servers in this pack</p>
+          <p className="skill-pack-empty">{t("packs.noMcpServers")}</p>
         ) : (
           <div className="skill-pack-item-list">
             {mcpServers.map((server, index) => {
@@ -460,7 +464,7 @@ function PackEditor({
           onClick={() => onSave({ name, description, skills, mcpServers })}
           disabled={saving || !name.trim()}
         >
-          {saving ? "Saving..." : "Save"}
+          {saving ? t("general.saving") : t("general.save")}
         </button>
         <button
           type="button"
@@ -492,6 +496,7 @@ function LibraryPicker<T extends { name: string; description: string }>({
   disabled: boolean;
   onPick: (item: T) => void;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -541,7 +546,7 @@ function LibraryPicker<T extends { name: string; description: string }>({
       </button>
       {open && (
         <div className="skill-pack-picker-menu" id={menuId}>
-          <label className="sr-only" htmlFor={`${menuId}-search`}>Search {label.toLowerCase()}</label>
+          <label className="sr-only" htmlFor={`${menuId}-search`}>{t("general.search")}</label>
           <input
             ref={inputRef}
             id={`${menuId}-search`}
@@ -553,11 +558,11 @@ function LibraryPicker<T extends { name: string; description: string }>({
                 triggerRef.current?.focus();
               }
             }}
-            placeholder={`Search ${label.toLowerCase()}`}
+            placeholder={t("general.search")}
           />
           <div className="skill-pack-picker-options" role="listbox" aria-label={label}>
             {visibleItems.length === 0 ? (
-              <p>No matching items</p>
+              <p>{t("packs.noMatchingItems")}</p>
             ) : (
               visibleItems.map((item) => (
                 <button
