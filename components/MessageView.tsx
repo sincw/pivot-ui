@@ -1,24 +1,25 @@
 "use client";
 
-import { memo, useState, useRef, useEffect, useMemo } from "react";
-import { ArrowDown, Check, ChevronDown, Copy, GitFork } from "lucide-react";
+import { memo, useState, useRef, useEffect, useMemo, type ReactNode } from "react";
+import { ArrowDown, Check, ChevronDown, Copy, File as FileIcon, FileText, GitFork } from "lucide-react";
 import { MarkdownBody } from "./MarkdownBody";
 import { copyText } from "@/lib/clipboard";
 import { parseCompactionSummary } from "@/lib/compaction-summary";
 import { isEmptyThinkingBlock } from "@/lib/message-display";
 import { useI18n } from "@/lib/i18n";
 import { parseUnifiedPatch, type SplitDiffCell } from "@/lib/patch";
-import type {
-  AgentMessage,
-  UserMessage,
-  AssistantMessage,
-  CustomMessage,
-  ToolResultMessage,
-  AssistantContentBlock,
-  TextContent,
-  ImageContent,
-  ToolCallContent,
-  ThinkingContent,
+import {
+  ATTACHMENT_SAVED_PREFIX,
+  type AgentMessage,
+  type UserMessage,
+  type AssistantMessage,
+  type CustomMessage,
+  type ToolResultMessage,
+  type AssistantContentBlock,
+  type TextContent,
+  type ImageContent,
+  type ToolCallContent,
+  type ThinkingContent,
 } from "@/lib/types";
 
 const MAX_THINKING_CACHE_ENTRIES = 100;
@@ -134,6 +135,192 @@ export const MessageView = memo(function MessageView({ message, isStreaming, too
     && prev.sessionId === next.sessionId;
 });
 
+// ── <file name="..."> tag rendering ──────────────────────────────────────
+// Small text attachments are inlined into the user message as
+// <file name="...">\ncontent\n</file> (mirroring pi's CLI @file behavior);
+// binary/large attachments are referenced as a saved-path hint inside the
+// same tag shape. These blocks are rendered as compact chips instead of raw
+// markdown so message bubbles stay readable.
+
+const FILE_TAG_RE = /<file name="([^"]*)">([\s\S]*?)<\/file>/g;
+
+function splitFileTags(content: string): Array<
+  | { type: "text"; text: string }
+  | { type: "file"; name: string; content: string }
+> {
+  const segments: Array<
+    | { type: "text"; text: string }
+    | { type: "file"; name: string; content: string }
+  > = [];
+  FILE_TAG_RE.lastIndex = 0;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = FILE_TAG_RE.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ type: "text", text: content.slice(lastIndex, match.index) });
+    }
+    segments.push({ type: "file", name: match[1], content: match[2].replace(/^\n+|\n+$/g, "") });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < content.length) {
+    segments.push({ type: "text", text: content.slice(lastIndex) });
+  }
+  return segments;
+}
+
+// Absolute-path regex (unix, ~ home, windows drive). File references whose
+// content is an absolute path render as a clickable file link (opens in the
+// right panel via onOpenFile); anything else falls back to inline/legacy.
+const ABSOLUTE_PATH_RE = /^(?:\/|~\/|[a-zA-Z]:[\\/])/;
+
+function FileTagBlock({ name, content, onOpenFile }: { name: string; content: string; onOpenFile?: (filePath: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const isSavedPath = ABSOLUTE_PATH_RE.test(content);
+  const isLegacySavedRef = !isSavedPath && content.startsWith(ATTACHMENT_SAVED_PREFIX);
+  const hasInlineContent = Boolean(content) && !isSavedPath && !isLegacySavedRef;
+
+  return (
+    <div
+      style={{
+        borderRadius: 6,
+        border: "1px solid var(--border)",
+        background: "color-mix(in srgb, var(--bg-panel) 70%, transparent)",
+        overflow: "hidden",
+        fontSize: 12,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px" }}>
+        {hasInlineContent ? (
+          <FileText size={13} strokeWidth={1.8} aria-hidden="true" style={{ color: "var(--accent)", flexShrink: 0 }} />
+        ) : (
+          <FileIcon size={13} strokeWidth={1.8} aria-hidden="true" style={{ color: "var(--accent)", flexShrink: 0 }} />
+        )}
+        {isSavedPath ? (
+          <button
+            type="button"
+            className="markdown-inline-code markdown-inline-file"
+            onClick={() => onOpenFile?.(content)}
+            title={`Open ${content}`}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              textAlign: "left",
+              fontFamily: "var(--font-mono)",
+              fontSize: 12,
+            }}
+          >
+            {name}
+          </button>
+        ) : (
+          <span
+            title={name}
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 12,
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              flex: 1,
+            }}
+          >
+            {name}
+          </span>
+        )}
+        {hasInlineContent && (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            style={{
+              flexShrink: 0,
+              background: "none",
+              border: "1px solid var(--border)",
+              borderRadius: 5,
+              padding: "1px 7px",
+              fontSize: 10.5,
+              color: "var(--text-muted)",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            {expanded ? "Hide" : "View"}
+          </button>
+        )}
+      </div>
+      {isLegacySavedRef && content && (
+        <div style={{ padding: "0 8px 5px", fontSize: 11, lineHeight: 1.45, color: "var(--text-dim)" }}>
+          {content}
+        </div>
+      )}
+      {expanded && hasInlineContent && (
+        <pre
+          style={{
+            margin: 0,
+            padding: "6px 8px",
+            maxHeight: 260,
+            overflow: "auto",
+            fontSize: 11,
+            lineHeight: 1.5,
+            borderTop: "1px solid var(--border)",
+            background: "var(--bg-subtle)",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            fontFamily: "var(--font-mono)",
+          }}
+        >
+          {content}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+// Render parsed user-message segments: consecutive <file> tags (ignoring
+// whitespace-only text between them, e.g. the "\n" joining file refs) are
+// grouped into one wrapping flex row so multiple attachments share a single
+// line; text segments render through MarkdownBody as before.
+function renderUserContent(
+  segments: Array<{ type: "text"; text: string } | { type: "file"; name: string; content: string }>,
+  cwd: string | undefined,
+  onOpenFile: ((filePath: string) => void) | undefined,
+): ReactNode {
+  const nodes: ReactNode[] = [];
+  let fileGroup: { name: string; content: string }[] = [];
+  let groupIndex = 0;
+
+  const flush = () => {
+    if (fileGroup.length === 0) return;
+    nodes.push(
+      <div
+        key={`fg${groupIndex}`}
+        style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "4px 0" }}
+      >
+        {fileGroup.map((f, i) => (
+          <FileTagBlock key={`${f.name}:${i}`} name={f.name} content={f.content} onOpenFile={onOpenFile} />
+        ))}
+      </div>,
+    );
+    groupIndex += 1;
+    fileGroup = [];
+  };
+
+  segments.forEach((seg, i) => {
+    if (seg.type === "file") {
+      fileGroup.push(seg);
+      return;
+    }
+    if (!seg.text.trim()) return; // whitespace-only gaps don't break the file row
+    flush();
+    nodes.push(
+      <MarkdownBody key={`t${i}`} cwd={cwd} onOpenFile={onOpenFile}>{seg.text}</MarkdownBody>,
+    );
+  });
+  flush();
+  return nodes;
+}
+
 function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, onNavigate, prevAssistantEntryId, onEditContent }: {
   message: UserMessage;
   cwd?: string;
@@ -220,7 +407,17 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
               })}
             </div>
           )}
-          {content && <MarkdownBody className="markdown-user-message" cwd={cwd} onOpenFile={onOpenFile}>{content}</MarkdownBody>}
+          {content && (() => {
+            const segments = splitFileTags(content);
+            if (!segments.some((seg) => seg.type === "file")) {
+              return <MarkdownBody className="markdown-user-message" cwd={cwd} onOpenFile={onOpenFile}>{content}</MarkdownBody>;
+            }
+            return (
+              <div className="markdown-user-message">
+                {renderUserContent(segments, cwd, onOpenFile)}
+              </div>
+            );
+          })()}
         </div>
 
       </div>

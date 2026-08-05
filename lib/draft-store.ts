@@ -1,11 +1,14 @@
-export interface ChatDraftImage {
-  data: string;
+/** Persistable subset of ChatAttachment (no previewUrl / revocable URLs). */
+export interface ChatDraftAttachment {
+  name: string;
+  size: number;
   mimeType: string;
+  savedPath?: string;
 }
 
 export interface ChatDraft {
   value: string;
-  images: ChatDraftImage[];
+  attachments: ChatDraftAttachment[];
 }
 
 const drafts = new Map<string, ChatDraft>();
@@ -13,12 +16,12 @@ const drafts = new Map<string, ChatDraft>();
 function cloneDraft(draft: ChatDraft): ChatDraft {
   return {
     value: draft.value,
-    images: draft.images.map((image) => ({ ...image })),
+    attachments: draft.attachments.map((a) => ({ ...a })),
   };
 }
 
 function isEmptyDraft(draft: ChatDraft): boolean {
-  return !draft.value && draft.images.length === 0;
+  return !draft.value && draft.attachments.length === 0;
 }
 
 export function getDraft(key: string): ChatDraft | null {

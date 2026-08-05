@@ -3,6 +3,7 @@ import { homedir } from "os";
 import path from "path";
 import { getAdditionalAllowedRoots, normalizeSlashes } from "./allowed-roots";
 import { listAllSessions } from "./session-reader";
+import { getPivotUiAttachmentsDir } from "./attachment-config";
 export { allowFileRoot, normalizeSlashes } from "./allowed-roots";
 
 // Short-TTL cache for the allowed-roots set. Without this, every file list/read
@@ -44,6 +45,10 @@ export async function getAllowedFileRoots(): Promise<Set<string>> {
   } catch {
     // ignore if home is unreadable
   }
+
+  // Chat attachment uploads live under ~/.pivot-ui/attachments/ — the right
+  // panel opens them like any other file, so the dir must be browsable.
+  roots.add(normalizeSlashes(getPivotUiAttachmentsDir()));
 
   for (const root of getAdditionalAllowedRoots()) roots.add(root);
 

@@ -26,6 +26,11 @@ const nextConfig: NextConfig = {
     "node-pty",
   ],
   allowedDevOrigins,
+  // Attachment uploads (multipart) can reach ~10 MiB of file data plus
+  // multipart overhead; the default 10 MB proxy body cap would truncate them.
+  experimental: {
+    proxyClientMaxBodySize: "25mb",
+  },
   async headers() {
     return [
       {

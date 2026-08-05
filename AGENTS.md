@@ -47,6 +47,7 @@ app/api/
   agent/[id]/route.ts             GET state | POST any command
   agent/[id]/events/route.ts      GET SSE stream
   agent/running/events/route.ts   GET SSE stream of currently-running session ids
+  attachments/route.ts            GET attachment config | POST save a binary attachment under ~/.pivot-ui/attachments/
   auth/all-providers/route.ts     GET API-key provider list
   auth/api-key/[provider]/route.ts GET/POST/DELETE provider API key status/storage
   auth/login/[provider]/route.ts  GET OAuth/device-code SSE | POST manual code
@@ -100,6 +101,7 @@ lib/
   pi-types.ts          local structural types for pi SDK objects
   rpc-manager.ts      AgentSessionWrapper + registry + startRpcSession
   session-reader.ts   SessionManager wrappers + path cache + buildSessionContext adapter
+  attachment-config.ts reads ~/.pivot-ui/config.json maxAttachmentBytes + attachment dir helpers
   skill-library.ts     library scan/import/delete primitives
   skill-packs-store.ts global skill-pack config and pack CRUD
   skill-pack-apply.ts  preview, atomic apply/rollback, and unapply

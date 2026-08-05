@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useReducer } from "react";
 import type {
   AgentMessage,
+  ChatAttachment,
   ExtensionStatusItem,
   ExtensionUiRequest,
   ExtensionWidgetItem,
@@ -294,13 +295,9 @@ export interface ChatInputHandle {
   insertText: (text: string) => void;
   insertIfEmpty: (content: string) => void;
   prependText: (text: string) => void;
+  addFiles: (files: File[]) => void;
+  /** @deprecated use addFiles — accepts any file, not just images */
   addImages: (files: File[]) => void;
-}
-
-export interface AttachedImage {
-  data: string;
-  mimeType: string;
-  previewUrl: string;
 }
 
 type SelectedModel = { provider: string; modelId: string };
@@ -1003,24 +1000,70 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   }, [addNotice, finishPromptWithoutStream, handleExtensionUiRequest, loadSession, onAgentEnd]);
   handleAgentEventRef.current = handleAgentEvent;
 
-  const handleSend = useCallback(async (message: string, images?: AttachedImage[]) => {
+  // Sanitize a file name for embedding inside a <file name="..."> tag.
+  const escapeFileTagName = useCallback((name: string) => name.replace(/[<>]/g, "_").replace(/[\r\n]+/g, " "), []);
+
+  // Turn attachments into <file> text fragments appended to the prompt.
+  // Every attachment is uploaded to ~/.pivot-ui/attachments/ before the user
+  // can send (the send button is gated on all attachments being ready), so
+  // here we only reference the saved path — the agent reads files with its
+  // tools. Returns null if an attachment is not ready.
+  // Resolve attachments into (a) pi image content blocks for images (base64,
+  // same as the original image flow) and (b) <file> path references for
+  // uploaded files. The reference content is the absolute saved path — the
+  // agent reads it with its tools, and MessageView renders it as a clickable
+  // file link. Throws if an uploaded attachment is not ready.
+  const prepareAttachments = useCallback(async (attachments: ChatAttachment[] | undefined): Promise<{
+    piImages: { type: "image"; data: string; mimeType: string }[];
+    fileText: string;
+  }> => {
+    const piImages: { type: "image"; data: string; mimeType: string }[] = [];
+    const fileParts: string[] = [];
+    for (const att of attachments ?? []) {
+      if (att.mimeType.startsWith("image/")) {
+        if (att.data) piImages.push({ type: "image", data: att.data, mimeType: att.mimeType });
+        continue;
+      }
+      if (!att.savedPath) {
+        throw new Error(`Attachment "${att.name}" is not uploaded yet`);
+      }
+      fileParts.push(`<file name="${escapeFileTagName(att.name)}">${att.savedPath}</file>`);
+    }
+    return { piImages, fileText: fileParts.join("\n") };
+  }, [escapeFileTagName]);
+
+  const handleSend = useCallback(async (message: string, attachments?: ChatAttachment[]) => {
     const trimmedMessage = message.trim();
-    if (!trimmedMessage && !images?.length) return;
-    if (agentRunRef.current.running) return;
+    if (!trimmedMessage && !attachments?.length) return false;
+    if (agentRunRef.current.running) return false;
     try {
       await ensurePackSkillsReloaded();
     } catch (e) {
       addNotice({ type: "error", message: `Failed to reload pack skills: ${String(e)}` });
-      return;
+      return false;
     }
-    if (agentRunRef.current.running) return;
-    const isSlashCommandPrompt = !images?.length && trimmedMessage.startsWith("/");
+    if (agentRunRef.current.running) return false;
+    const isSlashCommandPrompt = !attachments?.length && trimmedMessage.startsWith("/");
+
+    // Images become image content blocks; uploaded files are referenced by
+    // path in the prompt text. Any failure aborts the send and keeps the
+    // input intact (handleSend returns false).
+    let prepared: { piImages: { type: "image"; data: string; mimeType: string }[]; fileText: string };
+    try {
+      prepared = await prepareAttachments(attachments);
+    } catch (e) {
+      addNotice({ type: "error", message: e instanceof Error ? e.message : String(e) });
+      return false;
+    }
+    const { piImages, fileText } = prepared;
+    const fullMessage = [trimmedMessage, fileText].filter(Boolean).join("\n");
+
     const promptRunId = agentRunRef.current.start();
 
-    const imageBlocks = images?.map((img) => ({ type: "image" as const, source: { type: "base64" as const, media_type: img.mimeType, data: img.data } }));
+    const imageBlocks = piImages.map((img) => ({ type: "image" as const, source: { type: "base64" as const, media_type: img.mimeType, data: img.data } }));
     const userMsg: AgentMessage = {
       role: "user",
-      content: imageBlocks?.length
+      content: imageBlocks.length
         ? [...(message.trim() ? [{ type: "text" as const, text: message }] : []), ...imageBlocks]
         : message,
       timestamp: Date.now(),
@@ -1031,8 +1074,6 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     setAgentPhase(isSlashCommandPrompt ? { kind: "running_command" } : { kind: "waiting_model" });
     dispatch({ type: "start" });
     setPromptGeneration(promptRunId);
-
-    const piImages = images?.map((img) => ({ type: "image" as const, data: img.data, mimeType: img.mimeType }));
 
     try {
       let sentSessionId: string | null = null;
@@ -1052,8 +1093,8 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
           await ensureEventsConnected(sid);
           await sendAgentCommand(sid, {
             type: "prompt",
-            message,
-            ...(piImages?.length ? { images: piImages } : {}),
+            message: fullMessage,
+            ...(piImages.length ? { images: piImages } : {}),
           });
           promoteNewSession(1, message);
         }
@@ -1062,8 +1103,8 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         await ensureEventsConnected(session.id);
         await sendAgentCommand(session.id, {
           type: "prompt",
-          message,
-          ...(piImages?.length ? { images: piImages } : {}),
+          message: fullMessage,
+          ...(piImages.length ? { images: piImages } : {}),
         });
       }
       if (isSlashCommandPrompt && sentSessionId) {
@@ -1088,8 +1129,10 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       setAgentRunning(false);
       setAgentPhase(null);
       dispatch({ type: "end" });
+      return false;
     }
-  }, [isNew, newSessionCwd, newSessionModel, session, ensureNewSession, ensureEventsConnected, promoteNewSession, waitForPromptSettlement, addNotice, ensurePackSkillsReloaded]);
+    return true;
+  }, [isNew, newSessionCwd, newSessionModel, session, ensureNewSession, ensureEventsConnected, promoteNewSession, waitForPromptSettlement, addNotice, ensurePackSkillsReloaded, prepareAttachments]);
 
   const handleAbort = useCallback(async () => {
     const sid = sessionIdRef.current;
@@ -1287,15 +1330,13 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   // the real user message when pi delivers it (user message_end event). An
   // optimistic chat bubble here would duplicate the queue panel and turn into
   // a ghost message if the queue is recalled.
-  const handleSteer = useCallback(async (message: string, images?: AttachedImage[]) => {
+  const handleSteer = useCallback(async (message: string) => {
     const sid = sessionIdRef.current;
     if (!sid) return;
-    const piImages = images?.map((img) => ({ type: "image" as const, data: img.data, mimeType: img.mimeType }));
     try {
       await sendAgentCommand(sid, {
         type: "steer",
         message,
-        ...(piImages?.length ? { images: piImages } : {}),
       });
     } catch (e) {
       console.error("Failed to steer:", e);
@@ -1305,32 +1346,27 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const handlePromptWithStreamingBehavior = useCallback(async (
     message: string,
     behavior: "steer" | "followUp",
-    images?: AttachedImage[],
   ) => {
     const sid = sessionIdRef.current;
     if (!sid) return;
-    const piImages = images?.map((img) => ({ type: "image" as const, data: img.data, mimeType: img.mimeType }));
     try {
       await sendAgentCommand(sid, {
         type: "prompt",
         message,
         streamingBehavior: behavior,
-        ...(piImages?.length ? { images: piImages } : {}),
       });
     } catch (e) {
       console.error("Failed to queue prompt:", e);
     }
   }, []);
 
-  const handleFollowUp = useCallback(async (message: string, images?: AttachedImage[]) => {
+  const handleFollowUp = useCallback(async (message: string) => {
     const sid = sessionIdRef.current;
     if (!sid) return;
-    const piImages = images?.map((img) => ({ type: "image" as const, data: img.data, mimeType: img.mimeType }));
     try {
       await sendAgentCommand(sid, {
         type: "follow_up",
         message,
-        ...(piImages?.length ? { images: piImages } : {}),
       });
     } catch (e) {
       console.error("Failed to follow up:", e);

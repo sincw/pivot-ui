@@ -115,6 +115,7 @@ PIVOT_ALLOWED_DEV_ORIGINS=home.sinc.lol
 - Session history remains in pi's local `~/.pi/agent/sessions` directory. Set `PI_CODING_AGENT_DIR` to use another pi agent directory.
 - File browsing is scoped to selected projects and session-known working directories; it is not a general filesystem browser.
 - The default Skill Library is `~/.pivot-ui/lib/skills`. An existing explicit library path in pi's Skill Pack configuration is left unchanged.
+- Chat attachments are size-limited (default 10 MiB). Set `maxAttachmentBytes` in `~/.pivot-ui/config.json` to change the limit, e.g. `{ "maxAttachmentBytes": 5242880 }` for 5 MiB. Images are sent to the model as base64 image content blocks (no upload). Other files are uploaded as-is to `~/.pivot-ui/attachments/` right after selection — the send button stays disabled until every upload finishes — and the prompt references each file's saved path. In the chat history, attachments render as a file card whose path is a clickable link that opens the file in the right panel.
 
 ## Development
 

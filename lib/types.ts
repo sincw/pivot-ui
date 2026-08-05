@@ -1,5 +1,59 @@
 // Types mirrored from pi-mono coding-agent session-manager
 
+// ── Chat attachments ──────────────────────────────────────────────────────
+// Attachments attached to a chat prompt. Every attachment (image or not) is
+// uploaded to ~/.pivot-ui/attachments/ as-is right after selection; the
+// prompt text then references the saved path so the agent can read the file
+// with its tools (pi's read tool returns image content blocks for images,
+// so the model can still "see" uploaded pictures).
+
+export type ChatAttachmentStatus = "uploading" | "ready" | "error";
+
+export interface ChatAttachment {
+  /** stable local id (crypto.randomUUID) */
+  id: string;
+  /** original file name */
+  name: string;
+  /** file size in bytes */
+  size: number;
+  /** MIME type reported by the browser */
+  mimeType: string;
+  /** upload lifecycle state — send is gated on every attachment being "ready" */
+  status: ChatAttachmentStatus;
+  /** base64 payload (no prefix) — set for images, which are sent to the model as image content blocks */
+  data?: string;
+  /** absolute path once saved server-side (non-image attachments) */
+  savedPath?: string;
+  /** upload failure message */
+  error?: string;
+  /** local object URL preview for images before sending (revoke on remove/unmount) */
+  previewUrl?: string;
+}
+
+/** Default max attachment size: 10 MiB. Override via ~/.pivot-ui/config.json `maxAttachmentBytes`. */
+export const DEFAULT_MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB"];
+  let value = bytes;
+  let unit = "B";
+  for (const u of units) {
+    value /= 1024;
+    unit = u;
+    if (value < 1024 || u === "GB") break;
+  }
+  return `${value >= 100 ? value.toFixed(0) : value >= 10 ? value.toFixed(1) : value.toFixed(2)} ${unit}`;
+}
+
+/**
+ * Prefix of the <file> hint text for attachments saved server-side.
+ * MessageView detects this prefix to render a saved-path chip instead of an
+ * inline content block (legacy inlined <file> tags still render expandable).
+ */
+export const ATTACHMENT_SAVED_PREFIX = "Attachment (";
+
 export interface SessionHeader {
   type: "session";
   version?: number;

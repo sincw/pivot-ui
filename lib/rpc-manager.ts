@@ -1053,6 +1053,26 @@ export async function startRpcSession(
       ...(toolsOption !== undefined ? { tools: toolsOption } : {}),
     });
 
+    // pi defers writing a new session's .jsonl file until the first assistant
+    // message arrives (SessionManager._persist), so a brand-new session stays
+    // invisible in the sidebar until the first reply completes. Force the
+    // header onto disk immediately so the new session shows up as soon as the
+    // user sends their first message. Marking the manager flushed makes later
+    // appends use appendFileSync instead of the deferred "wx" create path,
+    // which would fail with EEXIST on the now-existing file.
+    if (!sessionFile) {
+      const manager = inner.sessionManager as unknown as {
+        isPersisted: () => boolean;
+        getSessionFile: () => string | undefined;
+        _rewriteFile?: () => void;
+        flushed?: boolean;
+      };
+      if (manager.isPersisted() && manager.getSessionFile() && typeof manager._rewriteFile === "function") {
+        manager._rewriteFile();
+        manager.flushed = true;
+      }
+    }
+
     // If specific tool names were requested (non-empty), set the active tools to the
     // requested builtin coding tools PLUS all extension/package tools, so installed
     // extensions stay usable in pivot-ui just like in the `pi` CLI.
