@@ -5,7 +5,7 @@ import test from "node:test";
 test("directory picker can create and select a named workspace", async () => {
   const sidebar = await readFile(new URL("./SessionSidebar.tsx", import.meta.url), "utf8");
 
-  assert.match(sidebar, /placeholder="Workspace folder name"/);
+  assert.match(sidebar, /placeholder=\{t\("app\.workspaceFolderName"\)\}/);
   assert.match(sidebar, /body: JSON\.stringify\(\{ path: listing\.path, name \}\)/);
   assert.match(sidebar, /const selectError = await onSelect\(data\.path\);/);
 });
