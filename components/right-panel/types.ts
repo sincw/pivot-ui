@@ -6,7 +6,7 @@ export interface RightPanelToolProps {
   projectRoot: string;
   sourceSessionId: string | null;
   explorerRefreshKey: number;
-  fileTreeRevealRequest: { path: string; id: number } | null;
+  fileTreeRevealRequest: { path: string; id: number; isDir?: boolean } | null;
   onOpenFile: (filePath: string, fileName: string) => void;
   onAtMention: (relativePath: string, isDir: boolean) => void;
   onRevealInFileTree: (filePath: string) => void;
@@ -44,4 +44,5 @@ export type RightPanelTab = ToolPanelTab | FilePanelTab;
 
 export interface RightPanelHandle {
   openFile: (filePath: string, fileName: string, sourceSessionId?: string | null) => void;
+  revealInFileTree: (filePath: string, isDir?: boolean) => void;
 }

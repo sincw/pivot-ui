@@ -25,7 +25,7 @@ interface Props {
   cwd: string;
   onOpenFile: (filePath: string, fileName: string) => void;
   refreshKey?: number;
-  revealRequest?: { path: string; id: number } | null;
+  revealRequest?: { path: string; id: number; isDir?: boolean } | null;
   onAtMention?: (relativePath: string, isDir: boolean) => void;
   showToolbar?: boolean;
   allowMutations?: boolean;
@@ -258,7 +258,7 @@ export function WorkspaceFileTree({ cwd, onOpenFile, refreshKey, revealRequest, 
     if (!path || path === revealRequest.path || path.split("/").some((part) => !part || part === "." || part === "..")) return;
     const requestId = ++revealRequestRef.current;
     setRevealingPath(path);
-    void reveal(path, false).finally(() => {
+    void reveal(path, revealRequest.isDir === true).finally(() => {
       if (requestId === revealRequestRef.current) setRevealingPath(null);
     });
   }, [cwd, reveal, revealRequest]);

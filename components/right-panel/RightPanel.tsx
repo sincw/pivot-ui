@@ -106,7 +106,7 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [fileTreeRevealRequest, setFileTreeRevealRequest] = useState<{ path: string; id: number } | null>(null);
+  const [fileTreeRevealRequest, setFileTreeRevealRequest] = useState<{ path: string; id: number; isDir?: boolean } | null>(null);
   const [restoredProject, setRestoredProject] = useState<string | null>(null);
   const [panelFullscreen, setPanelFullscreen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -221,8 +221,6 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
     openPanel();
   }, [openPanel, workspaceCwd]);
 
-  useImperativeHandle(ref, () => ({ openFile }), [openFile]);
-
   const openTool = useCallback((toolId: string) => {
     if (!workspaceCwd) return;
     const tool = getRightPanelTool(toolId);
@@ -244,11 +242,13 @@ export const RightPanel = forwardRef<RightPanelHandle, Props>(function RightPane
     openPanel();
   }, [openPanel, t, workspaceCwd]);
 
-  const revealInFileTree = useCallback((filePath: string) => {
+  const revealInFileTree = useCallback((filePath: string, isDir = false) => {
     if (!workspaceCwd) return;
-    setFileTreeRevealRequest((current) => ({ path: filePath, id: (current?.id ?? 0) + 1 }));
+    setFileTreeRevealRequest((current) => ({ path: filePath, id: (current?.id ?? 0) + 1, isDir }));
     openTool("file-tree");
   }, [openTool, workspaceCwd]);
+
+  useImperativeHandle(ref, () => ({ openFile, revealInFileTree }), [openFile, revealInFileTree]);
 
   const closeTab = useCallback((tabId: string) => {
     if (tabId.startsWith("tool:")) {

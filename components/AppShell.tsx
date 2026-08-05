@@ -18,11 +18,26 @@ import type { RightPanelHandle } from "./right-panel/types";
 import { useTheme } from "@/hooks/useTheme";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { copyText } from "@/lib/clipboard";
-import { getFileName } from "@/lib/file-paths";
+import { encodeFilePathForApi, getFileName } from "@/lib/file-paths";
 import { buildAtMentionText } from "@/lib/file-fuzzy";
 import type { SessionInfo, SessionTreeNode } from "@/lib/types";
 import type { ChatInputHandle } from "./ChatInput";
 import type { SessionStatsInfo } from "@/lib/pi-types";
+
+// Probe whether a chat-linked path is a directory so the right panel can
+// decide between opening a file tab and revealing a folder in the file tree.
+// Returns false on any access/network error so callers keep the file behavior.
+function isDirectoryPath(filePath: string, sessionId: string | null): Promise<boolean> {
+  const params = new URLSearchParams({ type: "stat" });
+  if (sessionId) params.set("sessionId", sessionId);
+  return fetch(`/api/files/${encodeFilePathForApi(filePath)}?${params.toString()}`)
+    .then(async (response) => {
+      if (!response.ok) return false;
+      const data = await response.json() as { isDir?: boolean };
+      return data.isDir === true;
+    })
+    .catch(() => false);
+}
 
 type SessionCopyField = "file" | "id";
 
@@ -302,7 +317,15 @@ export function AppShell() {
   }, [selectedSession, router]);
 
   const handleOpenLinkedFile = useCallback((filePath: string) => {
-    rightPanelRef.current?.openFile(filePath, getFileName(filePath), selectedSession?.id ?? null);
+    const sessionId = selectedSession?.id ?? null;
+    void isDirectoryPath(filePath, sessionId).then((isDir) => {
+      if (isDir) {
+        // Directory in the chat: open the right-panel file tree at that folder
+        rightPanelRef.current?.revealInFileTree(filePath, true);
+      } else {
+        rightPanelRef.current?.openFile(filePath, getFileName(filePath), sessionId);
+      }
+    });
   }, [selectedSession?.id]);
 
   const handleViewFullHistory = useCallback(() => {

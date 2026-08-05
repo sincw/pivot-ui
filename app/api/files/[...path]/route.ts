@@ -28,7 +28,7 @@ const IGNORED_NAMES = new Set([
 
 const IGNORED_SUFFIXES = [".pyc"];
 
-const FILE_REQUEST_TYPES = ["list", "read", "download", "meta", "preview", "watch"] as const;
+const FILE_REQUEST_TYPES = ["list", "read", "download", "meta", "stat", "preview", "watch"] as const;
 type FileRequestType = typeof FILE_REQUEST_TYPES[number];
 const FILE_REQUEST_TYPE_SET = new Set<string>(FILE_REQUEST_TYPES);
 
@@ -316,6 +316,17 @@ export async function GET(
         language: getLanguage(filePath),
         mime: imageMime || audioMime || documentMime || "text/plain",
         previewKind: documentPreviewKind(filePath),
+      });
+    }
+
+    if (type === "stat") {
+      // Lightweight kind check for chat links: lets the UI decide whether a
+      // path should open as a file tab or be revealed as a directory.
+      return NextResponse.json({
+        isFile: stat.isFile(),
+        isDir: stat.isDirectory(),
+        size: stat.isFile() ? stat.size : undefined,
+        language: stat.isFile() ? getLanguage(filePath) : undefined,
       });
     }
 

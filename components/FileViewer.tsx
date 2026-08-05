@@ -770,6 +770,22 @@ function TextFileViewer({ filePath, cwd, sourceSessionId, onOpenFile }: Props) {
 
                   return <a href={href} {...props} onClick={handleClick}>{children}</a>;
                 },
+                img({ src, alt, ...props }) {
+                  // Relative image paths in the .md resolve against the app
+                  // origin and 404. Rewrite local images to the files API so
+                  // they load from the file system (original file untouched).
+                  delete props.node;
+                  const localImage = typeof src === "string"
+                    ? resolveLocalFileHref(src, markdownDirectory, cwd ?? markdownDirectory)
+                    : null;
+                  return (
+                    <img
+                      src={localImage ? getFileApiUrl(localImage, "read", sourceSessionId) : src}
+                      alt={alt ?? ""}
+                      {...props}
+                    />
+                  );
+                },
               }}
             >
               {data.content}
