@@ -8,7 +8,7 @@ import {
   restoreScrollTop,
   VISIBLE_PAGE_SIZE,
 } from "@/lib/chat-lazy-load";
-import { getCompletionScrollAllowed, isAtScrollTail } from "./chat-viewport-state";
+import { getCompletionScrollAllowed, isAtScrollTail, shouldFollowScrollTailOnResize } from "./chat-viewport-state";
 
 const PROGRAMMATIC_SCROLL_IGNORE_MS = 700;
 const USER_SCROLL_INTENT_MS = 1200;
@@ -35,6 +35,11 @@ export function useChatViewport({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastUserMessageRef = useRef<HTMLDivElement>(null);
+  // Keep layout changes (for example, a status bar appearing above the
+  // viewport) from moving a user who was following the chat tail away from
+  // the latest content. This is separate from completionScrollAllowedRef:
+  // a new prompt intentionally scrolls its user message into view first.
+  const scrollTailPinnedRef = useRef(true);
   const initialScrollDoneRef = useRef(false);
   const completionScrollAllowedRef = useRef(true);
   const userScrollIntentUntilRef = useRef(0);
@@ -42,6 +47,7 @@ export function useChatViewport({
   const handledPromptGenerationRef = useRef(promptGeneration);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    scrollTailPinnedRef.current = true;
     if (behavior === "smooth") {
       ignoreProgrammaticScrollUntilRef.current = Date.now() + PROGRAMMATIC_SCROLL_IGNORE_MS;
     }
@@ -53,6 +59,7 @@ export function useChatViewport({
     const message = lastUserMessageRef.current;
     if (!container || !message) return;
     const top = message.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+    scrollTailPinnedRef.current = false;
     ignoreProgrammaticScrollUntilRef.current = Date.now() + PROGRAMMATIC_SCROLL_IGNORE_MS;
     container.scrollTo({ top: top - 16, behavior: "smooth" });
   }, []);
@@ -87,12 +94,21 @@ export function useChatViewport({
   }, []);
 
   const handleScrollPositionChange = useCallback((event: Event) => {
-    if (!agentRunning) return;
     const container = event.currentTarget as HTMLDivElement;
+    const now = Date.now();
+    const atTail = isAtScrollTail(container.scrollHeight, container.scrollTop, container.clientHeight);
+    if (atTail) {
+      scrollTailPinnedRef.current = true;
+      completionScrollAllowedRef.current = true;
+    } else if (now >= ignoreProgrammaticScrollUntilRef.current && now <= userScrollIntentUntilRef.current) {
+      scrollTailPinnedRef.current = false;
+    }
+
+    if (!agentRunning) return;
     completionScrollAllowedRef.current = getCompletionScrollAllowed({
       current: completionScrollAllowedRef.current,
-      atTail: isAtScrollTail(container.scrollHeight, container.scrollTop, container.clientHeight),
-      now: Date.now(),
+      atTail,
+      now,
       ignoreProgrammaticScrollUntil: ignoreProgrammaticScrollUntilRef.current,
       userScrollIntentUntil: userScrollIntentUntilRef.current,
     });
@@ -119,6 +135,50 @@ export function useChatViewport({
       container.removeEventListener("scroll", handleScrollPositionChange);
     };
   }, [messageCount, loading, handleScrollPositionChange, markUserScrollIntent]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    // The transient Running/Waiting indicator is rendered inside this content
+    // node. Observing only the viewport misses that height change because the
+    // viewport itself keeps the same dimensions.
+    const content = container.firstElementChild;
+
+    let frame: number | null = null;
+    const resizeObserver = new ResizeObserver((entries) => {
+      const contentChanged = content !== null && entries.some((entry) => entry.target === content);
+      if (!shouldFollowScrollTailOnResize({
+        scrollTailPinned: scrollTailPinnedRef.current,
+        completionScrollAllowed: completionScrollAllowedRef.current,
+        contentChanged,
+        agentRunning,
+      })) return;
+      // One re-anchor per frame is enough even when the status and message
+      // nodes report their size changes in separate observer callbacks.
+      if (frame !== null) return;
+      const followContent = contentChanged;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        // Check again because the user may have scrolled while the frame was
+        // waiting. Never take control back from an intentional scroll.
+        if (shouldFollowScrollTailOnResize({
+          scrollTailPinned: scrollTailPinnedRef.current,
+          completionScrollAllowed: completionScrollAllowedRef.current,
+          contentChanged: followContent,
+          agentRunning,
+        })) {
+          scrollToBottom("instant");
+        }
+      });
+    });
+    resizeObserver.observe(container);
+    if (content) resizeObserver.observe(content);
+
+    return () => {
+      resizeObserver.disconnect();
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, [agentRunning, loading, scrollToBottom]);
 
   useEffect(() => {
     if (promptGeneration === handledPromptGenerationRef.current) return;
