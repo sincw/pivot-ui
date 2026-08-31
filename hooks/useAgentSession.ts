@@ -14,6 +14,7 @@ import { normalizeToolCalls } from "@/lib/normalize";
 import { sendAgentCommand } from "@/lib/agent-client";
 import { AgentRunState } from "@/lib/agent-run-state";
 import { getToolNamesForPreset, type ToolEntry } from "@/lib/tool-presets";
+import { clearDraft } from "@/lib/draft-store";
 import type { SessionStatsInfo } from "@/lib/pi-types";
 
 export interface SessionData {
@@ -296,6 +297,8 @@ export interface ChatInputHandle {
   insertIfEmpty: (content: string) => void;
   prependText: (text: string) => void;
   addFiles: (files: File[]) => void;
+  /** Clears the composer and its current draft. */
+  clearInput: () => void;
   /** @deprecated use addFiles — accepts any file, not just images */
   addImages: (files: File[]) => void;
 }
@@ -505,6 +508,11 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     const sid = sessionIdRef.current;
     if (!isNew || !newSessionCwd || !sid || newSessionPromotedRef.current) return;
     newSessionPromotedRef.current = true;
+    // Clear the store explicitly as well as the mounted composer. This keeps
+    // the transient draft gone even if the composer is in the middle of the
+    // new-session -> existing-session prop transition.
+    clearDraft(`new:${newSessionCwd}`);
+    opts.chatInputRef?.current?.clearInput();
     onSessionCreated?.({
       id: sid,
       path: "",
@@ -515,7 +523,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       messageCount,
       firstMessage,
     });
-  }, [isNew, newSessionCwd, onSessionCreated]);
+  }, [isNew, newSessionCwd, onSessionCreated, opts.chatInputRef]);
 
   const ensureNewSession = useCallback(async () => {
     if (sessionIdRef.current) return sessionIdRef.current;

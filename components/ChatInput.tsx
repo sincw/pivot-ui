@@ -70,6 +70,8 @@ export interface ChatInputHandle {
   insertIfEmpty: (text: string) => void;
   prependText: (text: string) => void;
   addFiles: (files: File[]) => void;
+  /** Clears the composer and its current draft. */
+  clearInput: () => void;
   /** @deprecated use addFiles — accepts any file, not just images */
   addImages: (files: File[]) => void;
 }
@@ -264,6 +266,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const draftKeyRef = useRef(draftKey);
   const valueRef = useRef(value);
   const attachmentsRef = useRef(attachments);
+  const clearInputRef = useRef<(() => void) | null>(null);
   valueRef.current = value;
   attachmentsRef.current = attachments;
 
@@ -323,6 +326,9 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     },
     addFiles(files: File[]) {
       void addFiles(files);
+    },
+    clearInput() {
+      clearInputRef.current?.();
     },
     addImages(files: File[]) {
       void addFiles(files);
@@ -453,6 +459,11 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   }, []);
 
   const clearInput = useCallback(() => {
+    // Keep the refs in sync immediately. A successful first send promotes a
+    // new session and changes draftKey before React runs the key-transition
+    // effect; that effect must not persist the just-sent message again.
+    valueRef.current = "";
+    attachmentsRef.current = [];
     setValue("");
     setAtQuery(null);
     if (draftKey) clearDraft(draftKey);
@@ -462,6 +473,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       textareaRef.current.style.height = "auto";
     }
   }, [clearAttachments, draftKey]);
+  clearInputRef.current = clearInput;
 
   useEffect(() => {
     if (!draftKey || draftKeyRef.current !== draftKey) return;
@@ -493,7 +505,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     return () => {
       cancelled = true;
     };
-  }, [cwd, packsRefreshKey]);
+  }, [cwd, packsRefreshKey, draftKey]);
 
   useEffect(() => {
     const previousDraftKey = draftKeyRef.current;
@@ -563,6 +575,9 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       }
     }
     const ok = await onSend(msg, attachments.length ? attachments : undefined);
+    // New-session promotion happens during onSend. Clear only after the
+    // successful result so the transient draft is not restored on workspace
+    // switches, while failed sends keep the input available for retry.
     // onSend returns false when the message could not be dispatched (e.g. an
     // attachment is missing) — keep the input so the user can retry.
     if (ok !== false) clearInput();
